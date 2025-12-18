@@ -13,7 +13,7 @@ A modern, production-ready monorepo featuring Spring Boot (Maven) backend and Ne
 - **API Documentation**: Clean and documented REST API structure
 
 ### Frontend (Next.js)
-- **Modern UI**: Built with Next.js 14, React 19, and Tailwind CSS
+- **Modern UI**: Built with Next.js 16, React 19, and Tailwind CSS
 - **Authentication Flow**: Login, signup, and protected routes
 - **User Dashboard**: Personalized dashboard with user profile information
 - **Responsive Design**: Mobile-first, fully responsive interface
@@ -200,7 +200,7 @@ npm test
 ## 📦 Technologies Used
 
 ### Backend
-- Spring Boot 3.2.0
+- Spring Boot 4.0.1
 - Spring Security
 - Spring Data JPA
 - JWT (JSON Web Tokens)
@@ -209,7 +209,7 @@ npm test
 - Maven
 
 ### Frontend
-- Next.js 14
+- Next.js 16.1.0
 - React 19
 - TypeScript
 - Tailwind CSS
