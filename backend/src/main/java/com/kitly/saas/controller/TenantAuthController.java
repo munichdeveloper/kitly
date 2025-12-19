@@ -1,8 +1,10 @@
 package com.kitly.saas.controller;
 
 import com.kitly.saas.dto.AuthResponse;
+import com.kitly.saas.security.annotation.TenantAccessCheck;
 import com.kitly.saas.service.TenantAuthService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +27,7 @@ public class TenantAuthController {
     /**
      * Generate a tenant-scoped JWT token for the current user.
      * This allows users to switch between tenants they are members of.
+     * Note: This endpoint does NOT have @TenantAccessCheck because it's used to switch TO a tenant
      */
     @PostMapping("/token")
     public ResponseEntity<AuthResponse> generateTenantToken(@PathVariable UUID tenantId,
@@ -37,6 +40,8 @@ public class TenantAuthController {
      * Get the current user's role in the tenant
      */
     @GetMapping("/role")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'MEMBER')")
+    @TenantAccessCheck
     public ResponseEntity<RoleResponse> getTenantRole(@PathVariable UUID tenantId,
                                                       Authentication authentication) {
         String role = tenantAuthService.getTenantRole(authentication.getName(), tenantId);

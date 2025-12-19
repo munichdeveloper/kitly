@@ -2,9 +2,11 @@ package com.kitly.saas.controller;
 
 import com.kitly.saas.dto.MembershipResponse;
 import com.kitly.saas.dto.UpdateMemberRequest;
+import com.kitly.saas.security.annotation.TenantAccessCheck;
 import com.kitly.saas.service.MembershipService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,12 +24,16 @@ public class MembershipController {
     }
     
     @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'MEMBER')")
+    @TenantAccessCheck
     public ResponseEntity<List<MembershipResponse>> getTenantMembers(@PathVariable UUID tenantId) {
         List<MembershipResponse> members = membershipService.getTenantMembers(tenantId);
         return ResponseEntity.ok(members);
     }
     
     @PatchMapping("/{userId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @TenantAccessCheck
     public ResponseEntity<MembershipResponse> updateMember(@PathVariable UUID tenantId,
                                                            @PathVariable UUID userId,
                                                            @Valid @RequestBody UpdateMemberRequest request,

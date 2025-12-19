@@ -4,9 +4,11 @@ import com.kitly.saas.dto.AcceptInviteRequest;
 import com.kitly.saas.dto.CreateInviteResponse;
 import com.kitly.saas.dto.InvitationRequest;
 import com.kitly.saas.dto.InvitationResponse;
+import com.kitly.saas.security.annotation.TenantAccessCheck;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,8 @@ public class InviteController {
     }
     
     @PostMapping("/api/tenants/{tenantId}/invites")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @TenantAccessCheck
     public ResponseEntity<CreateInviteResponse> createInvite(@PathVariable UUID tenantId,
                                                               @Valid @RequestBody InvitationRequest request,
                                                               Authentication authentication) {
@@ -31,6 +35,8 @@ public class InviteController {
     }
     
     @GetMapping("/api/tenants/{tenantId}/invites")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @TenantAccessCheck
     public ResponseEntity<List<InvitationResponse>> listPendingInvites(@PathVariable UUID tenantId,
                                                                         Authentication authentication) {
         List<InvitationResponse> invitations = inviteService.listPendingInvites(tenantId, authentication.getName());
