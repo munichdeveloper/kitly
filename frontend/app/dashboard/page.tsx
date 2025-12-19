@@ -11,7 +11,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Dashboard check:', { loading, user });
     if (!loading && !user) {
+      console.log('Redirecting to login from dashboard');
       router.push('/auth/login');
     }
   }, [user, loading, router]);
@@ -79,7 +81,7 @@ export default function DashboardPage() {
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Roles</h3>
             <div className="space-y-2">
-              {user.roles.map((role) => (
+              {user.roles.map((role: string) => (
                 <span
                   key={role}
                   className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-2"

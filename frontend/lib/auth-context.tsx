@@ -24,33 +24,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      loadUser(storedToken);
+      loadUser();
     } else {
       setLoading(false);
     }
   }, []);
 
-  const loadUser = async (authToken: string) => {
+  const loadUser = async () => {
     try {
+      console.log('Loading user...');
       const userData = await ApiClient.getCurrentUser();
+      console.log('User loaded:', userData);
       setUser(userData);
+      return userData;
     } catch (error) {
       console.error('Failed to load user:', error);
       localStorage.removeItem('token');
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
       setToken(null);
+      return null;
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (username: string, password: string) => {
+    setLoading(true);
     try {
+      console.log('Logging in...');
       const response: AuthResponse = await ApiClient.login({ username, password });
+      console.log('Login successful, token:', response.token);
       localStorage.setItem('token', response.token);
+      // Set cookie for middleware
+      document.cookie = `token=${response.token}; path=/; max-age=86400; SameSite=Strict`;
       setToken(response.token);
-      await loadUser(response.token);
+      const user = await loadUser();
+      if (!user) {
+        throw new Error('Failed to load user profile');
+      }
     } catch (error) {
       console.error('Login failed:', error);
+      setLoading(false);
       throw error;
     }
   };
@@ -65,8 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName,
       });
       localStorage.setItem('token', response.token);
+      // Set cookie for middleware
+      document.cookie = `token=${response.token}; path=/; max-age=86400; SameSite=Strict`;
       setToken(response.token);
-      await loadUser(response.token);
+      await loadUser();
     } catch (error) {
       console.error('Signup failed:', error);
       throw error;
@@ -75,6 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    // Clear cookie
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     setToken(null);
     setUser(null);
   };
