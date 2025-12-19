@@ -11,6 +11,8 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    clean-disabled: false
+    locations: classpath:db/migration
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -35,3 +37,8 @@ jwt:
 
 cors:
   allowed-origins: http://localhost:3000
+
+logging:
+  level:
+    org.flywaydb: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG
