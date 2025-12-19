@@ -162,9 +162,6 @@ public class InviteService {
         
         // Check if user is already a member
         if (membershipRepository.existsByTenantIdAndUserId(invitation.getTenant().getId(), user.getId())) {
-            invitation.setStatus(Invitation.InvitationStatus.ACCEPTED);
-            invitation.setAcceptedAt(LocalDateTime.now());
-            invitationRepository.save(invitation);
             throw new BadRequestException("User is already a member of this tenant");
         }
         
@@ -225,9 +222,11 @@ public class InviteService {
             return;
         }
         
-        long currentMemberCount = membershipRepository.countByTenantIdAndRole(tenantId, Membership.MembershipRole.OWNER)
-                + membershipRepository.countByTenantIdAndRole(tenantId, Membership.MembershipRole.ADMIN)
-                + membershipRepository.countByTenantIdAndRole(tenantId, Membership.MembershipRole.MEMBER);
+        // Count all active memberships in a single query
+        long currentMemberCount = membershipRepository.countByTenantIdAndStatus(
+                tenantId, 
+                Membership.MembershipStatus.ACTIVE
+        );
         
         if (currentMemberCount >= maxSeats) {
             throw new BadRequestException("Seat limit reached. Cannot accept invitation.");
@@ -240,14 +239,15 @@ public class InviteService {
                 Subscription.SubscriptionStatus.ACTIVE
         ).orElseThrow(() -> new BadRequestException("No active subscription found"));
         
-        // The @Version annotation will automatically handle optimistic locking
-        subscription.setUpdatedAt(LocalDateTime.now());
+        // Save the subscription to trigger @Version increment automatically
+        // The @Version annotation will handle optimistic locking
         subscriptionRepository.save(subscription);
     }
     
     private User createUser(String email) {
         // Generate a random username from email
-        String username = email.split("@")[0] + "-" + UUID.randomUUID().toString().substring(0, 8);
+        String emailPrefix = email.contains("@") ? email.split("@")[0] : "user";
+        String username = emailPrefix + "-" + UUID.randomUUID().toString().substring(0, 8);
         
         // Generate a random password (user will need to reset it)
         String randomPassword = UUID.randomUUID().toString();
