@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Service for computing and managing tenant entitlements.
@@ -141,7 +140,7 @@ public class EntitlementService {
     private String mapSubscriptionPlanToPlanCode(Subscription.SubscriptionPlan plan) {
         return switch (plan) {
             case STARTER -> "starter";
-            case PROFESSIONAL -> "pro";
+            case BUSINESS -> "business";
             case ENTERPRISE -> "enterprise";
             case FREE -> "starter"; // FREE uses starter entitlements
         };

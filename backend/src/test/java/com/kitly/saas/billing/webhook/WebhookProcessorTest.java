@@ -188,7 +188,7 @@ class WebhookProcessorTest {
         verify(subscriptionRepository, times(1)).save(subscriptionCaptor.capture());
         
         Subscription savedSubscription = subscriptionCaptor.getValue();
-        assertEquals(Subscription.SubscriptionPlan.PROFESSIONAL, savedSubscription.getPlan());
+        assertEquals(Subscription.SubscriptionPlan.BUSINESS, savedSubscription.getPlan());
         
         verify(entitlementService, times(1)).bumpEntitlementVersion(testTenantId);
         verify(outboxService, times(1))

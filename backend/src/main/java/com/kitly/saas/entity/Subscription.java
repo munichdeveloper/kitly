@@ -93,7 +93,7 @@ public class Subscription {
     public enum SubscriptionPlan {
         FREE,
         STARTER,
-        PROFESSIONAL,
+        BUSINESS,
         ENTERPRISE
     }
     
@@ -114,7 +114,7 @@ public class Subscription {
         return switch (plan) {
             case FREE -> 3;
             case STARTER -> 10;
-            case PROFESSIONAL -> 50;
+            case BUSINESS -> 50;
             case ENTERPRISE -> null; // Unlimited
         };
     }

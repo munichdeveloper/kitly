@@ -55,7 +55,7 @@ class EntitlementServiceTest {
         testSubscription = Subscription.builder()
                 .id(UUID.randomUUID())
                 .tenant(testTenant)
-                .plan(Subscription.SubscriptionPlan.PROFESSIONAL)
+                .plan(Subscription.SubscriptionPlan.BUSINESS)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
                 .maxSeats(50)
                 .build();

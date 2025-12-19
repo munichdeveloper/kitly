@@ -12,10 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -236,7 +233,7 @@ public class WebhookProcessor {
     private Subscription.SubscriptionPlan mapPlanName(String planName) {
         return switch (planName.toLowerCase()) {
             case "starter" -> Subscription.SubscriptionPlan.STARTER;
-            case "professional", "pro" -> Subscription.SubscriptionPlan.PROFESSIONAL;
+            case "professional", "pro" -> Subscription.SubscriptionPlan.BUSINESS;
             case "enterprise" -> Subscription.SubscriptionPlan.ENTERPRISE;
             default -> Subscription.SubscriptionPlan.FREE;
         };

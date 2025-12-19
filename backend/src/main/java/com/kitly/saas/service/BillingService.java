@@ -140,7 +140,7 @@ public class BillingService {
         BigDecimal monthlyAmount = switch (plan) {
             case FREE -> BigDecimal.ZERO;
             case STARTER -> new BigDecimal("29.00");
-            case PROFESSIONAL -> new BigDecimal("99.00");
+            case BUSINESS -> new BigDecimal("99.00");
             case ENTERPRISE -> new BigDecimal("299.00");
         };
         

@@ -3,6 +3,7 @@ package com.kitly.saas.service;
 import com.kitly.saas.dto.AuthResponse;
 import com.kitly.saas.dto.LoginRequest;
 import com.kitly.saas.dto.SignupRequest;
+import com.kitly.saas.dto.TenantRequest;
 import com.kitly.saas.entity.Role;
 import com.kitly.saas.entity.User;
 import com.kitly.saas.repository.RoleRepository;
@@ -27,15 +28,17 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    
+    private final TenantService tenantService;
+
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                       PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
-                      JwtUtil jwtUtil) {
+                      JwtUtil jwtUtil, TenantService tenantService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.tenantService = tenantService;
     }
     
     @Transactional
@@ -65,6 +68,27 @@ public class AuthService {
         
         userRepository.save(user);
         
+        // Create default tenant
+        String workspaceName = (request.getFirstName() != null ? request.getFirstName() : request.getUsername()) + "'s Workspace";
+        String baseSlug = request.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "") + "-workspace";
+        String slug = baseSlug;
+
+        // Simple retry logic for slug uniqueness
+        int attempt = 0;
+        while (attempt < 3) {
+            try {
+                TenantRequest tenantRequest = TenantRequest.builder()
+                        .name(workspaceName)
+                        .slug(slug)
+                        .build();
+                tenantService.createTenant(tenantRequest, user.getUsername());
+                break;
+            } catch (Exception e) {
+                attempt++;
+                slug = baseSlug + "-" + System.currentTimeMillis();
+            }
+        }
+
         // Generate token for the new user
         UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())

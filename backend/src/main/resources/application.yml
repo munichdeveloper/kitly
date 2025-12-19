@@ -43,7 +43,15 @@ cors:
   allowed-origins: http://localhost:3000
 
 stripe:
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_test_secret}
+  api-key: ${STRIPE_API_KEY:sk_..}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_..}
+  price:
+    starter: ${STRIPE_PRICE_STARTER:price_starter}
+    business: ${STRIPE_PRICE_BUSINESS:price_business}
+    enterprise: ${STRIPE_PRICE_ENTERPRISE:price_enterprise}
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
 
 outbox:
   publisher:

@@ -23,9 +23,9 @@ public class PlanCatalog {
                 .build());
         
         // Pro Plan
-        PLANS.put("pro", PlanDefinition.builder()
-                .code("pro")
-                .name("Professional")
+        PLANS.put("business", PlanDefinition.builder()
+                .code("business")
+                .name("Business")
                 .entitlements(Map.of(
                     "features.ai_assistant", "true",
                     "limits.projects", "100",
