@@ -47,6 +47,10 @@ public class User {
     @Size(max = 100)
     private String lastName;
     
+    @Size(max = 255)
+    @Column(name = "idp_subject", unique = true)
+    private String idpSubject;
+    
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
