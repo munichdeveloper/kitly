@@ -35,6 +35,9 @@ server:
 jwt:
   secret: kitly-secret-key-for-jwt-token-signing-please-change-in-production
   expiration: 86400000 # 24 hours in milliseconds
+  session:
+    secret: ${JWT_SESSION_SECRET:session-secret-key-for-jwt-token-signing-please-change-in-production}
+    expiration: 900000  # 15 minutes in milliseconds
 
 cors:
   allowed-origins: http://localhost:3000

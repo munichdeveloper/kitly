@@ -1,5 +1,6 @@
 package com.kitly.saas.security;
 
+import com.kitly.saas.common.context.TenantContextHolder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             
             if (jwtUtil.validateToken(jwt, userDetails)) {
+                // Extract tenant ID from JWT and populate TenantContext
+                java.util.UUID tenantId = jwtUtil.extractTenantId(jwt);
+                if (tenantId != null) {
+                    TenantContextHolder.setTenantId(tenantId);
+                }
+                
                 // Extract roles from JWT token (tenant-specific roles)
                 java.util.List<String> tenantRoles = jwtUtil.extractRoles(jwt);
                 

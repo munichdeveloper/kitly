@@ -23,6 +23,12 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
     
+    @Value("${jwt.session.secret}")
+    private String sessionSecret;
+    
+    @Value("${jwt.session.expiration}")
+    private Long sessionExpiration;
+    
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -37,11 +43,27 @@ public class JwtUtil {
     }
     
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        // Try to parse with session key first, then fall back to regular key
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSessionSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+            // If session key fails, try regular key
+            // This allows supporting both session tokens and legacy IdP tokens
+            try {
+                return Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+            } catch (io.jsonwebtoken.JwtException ex) {
+                // Log and rethrow for security monitoring
+                throw new io.jsonwebtoken.JwtException("Failed to parse JWT token with both session and regular keys", ex);
+            }
+        }
     }
     
     private Boolean isTokenExpired(String token) {
@@ -84,6 +106,10 @@ public class JwtUtil {
         });
     }
     
+    public Long extractEntitlementVersion(String token) {
+        return extractClaim(token, claims -> claims.get("ent_v", Long.class));
+    }
+    
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
                 .claims(claims)
@@ -94,6 +120,34 @@ public class JwtUtil {
                 .compact();
     }
     
+    /**
+     * Generate a tenant-scoped session token.
+     * This token is separate from the IdP token and contains tenant-specific context.
+     *
+     * @param userId User ID (used as subject)
+     * @param tenantId Tenant ID for the session
+     * @param roles List of tenant-specific roles (e.g., OWNER, ADMIN, MEMBER)
+     * @param entitlementVersion Current entitlement version for the tenant
+     * @return JWT token with tenant context
+     */
+    public String generateTenantToken(java.util.UUID userId, java.util.UUID tenantId, 
+                                     java.util.List<String> roles, Long entitlementVersion) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tid", tenantId.toString());
+        claims.put("roles", roles);
+        if (entitlementVersion != null) {
+            claims.put("ent_v", entitlementVersion);
+        }
+        
+        return Jwts.builder()
+                .claims(claims)
+                .subject(userId.toString())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + sessionExpiration))
+                .signWith(getSessionSigningKey())
+                .compact();
+    }
+    
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
@@ -101,6 +155,11 @@ public class JwtUtil {
     
     private SecretKey getSigningKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+    
+    private SecretKey getSessionSigningKey() {
+        byte[] keyBytes = sessionSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
