@@ -43,8 +43,21 @@ public class WebhookController {
                         .body(Map.of("error", "Invalid webhook payload"));
             }
             
-            // TODO: Verify Stripe signature in production
-            // verifyStripeSignature(signature, payload);
+            // TODO: SECURITY - Verify Stripe signature in production
+            // This is a critical security requirement to prevent unauthorized webhook processing
+            // Implement signature verification using Stripe SDK:
+            // 
+            // String webhookSecret = System.getenv("STRIPE_WEBHOOK_SECRET");
+            // try {
+            //     Event event = Webhook.constructEvent(
+            //         requestBody, signature, webhookSecret
+            //     );
+            // } catch (SignatureVerificationException e) {
+            //     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            //         .body(Map.of("error", "Invalid signature"));
+            // }
+            //
+            // See: https://stripe.com/docs/webhooks/signatures
             
             // Store webhook for idempotent processing
             webhookService.storeWebhook("stripe", eventId, eventType, payload);

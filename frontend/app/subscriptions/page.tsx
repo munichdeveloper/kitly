@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { ApiClient, EntitlementResponse } from '@/lib/api';
+import { ApiClient, EntitlementResponse, PlansResponse } from '@/lib/api';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
@@ -11,7 +11,7 @@ export default function SubscriptionsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [entitlements, setEntitlements] = useState<EntitlementResponse | null>(null);
-  const [plans, setPlans] = useState<any>(null);
+  const [plans, setPlans] = useState<PlansResponse | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,14 +140,14 @@ export default function SubscriptionsPage() {
         <div className="mb-8">
           <h3 className="text-2xl font-bold text-gray-900 mb-6">Available Plans</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {plans && Object.entries(plans).map(([code, plan]: [string, any]) => (
+            {plans && Object.entries(plans).map(([code, plan]) => (
               <Card key={code}>
                 <div className="text-center">
                   <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h4>
                   <div className="mb-4">
-                    {plan.entitlements && Object.entries(plan.entitlements).map(([key, value]: [string, any]) => (
+                    {plan.entitlements && Object.entries(plan.entitlements).map(([key, value]) => (
                       <div key={key} className="text-sm text-gray-600 py-1">
-                        {key}: {String(value)}
+                        {key}: {value}
                       </div>
                     ))}
                   </div>

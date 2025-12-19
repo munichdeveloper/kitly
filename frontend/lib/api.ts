@@ -68,6 +68,19 @@ export interface EntitlementItem {
   source: string;
 }
 
+export interface Plan {
+  code: string;
+  name: string;
+  entitlements: {
+    [key: string]: string;
+  };
+}
+
+export interface PlansResponse {
+  [key: string]: Plan;
+}
+
+
 export interface MembershipResponse {
   id: string;
   userId: string;
@@ -197,7 +210,7 @@ export class ApiClient {
     return response.json();
   }
 
-  static async getPlans(): Promise<any> {
+  static async getPlans(): Promise<PlansResponse> {
     const response = await fetch(`${API_BASE_URL}/plans`, {
       method: 'GET',
     });
