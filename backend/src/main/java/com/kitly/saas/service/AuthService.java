@@ -69,8 +69,20 @@ public class AuthService {
         userRepository.save(user);
         
         // Create default tenant
-        String workspaceName = (request.getFirstName() != null ? request.getFirstName() : request.getUsername()) + "'s Workspace";
-        String baseSlug = request.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "") + "-workspace";
+        String workspaceName;
+        String baseSlug;
+
+        if (request.getCompanyName() != null && !request.getCompanyName().trim().isEmpty()) {
+            workspaceName = request.getCompanyName();
+            baseSlug = request.getCompanyName().toLowerCase().replaceAll("[^a-z0-9]", "");
+            if (baseSlug.isEmpty()) {
+                baseSlug = "workspace";
+            }
+        } else {
+            workspaceName = (request.getFirstName() != null ? request.getFirstName() : request.getUsername()) + "'s Workspace";
+            baseSlug = request.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "") + "-workspace";
+        }
+
         String slug = baseSlug;
 
         // Simple retry logic for slug uniqueness
