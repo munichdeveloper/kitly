@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ApiClient } from '@/lib/api';
+import { ApiClient, ApiError } from '@/lib/api';
 import { TenantResponse, EntitlementResponse, MembershipResponse } from '@/lib/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
@@ -35,9 +35,10 @@ export default function DashboardPage() {
       setTenant(tenantData);
       setEntitlements(entitlementsData);
       setMembers(membersData);
-    } catch (err: any) {
-      console.error('Failed to load dashboard data:', err);
-      setError(err.message || 'Failed to load dashboard data');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to load dashboard data:', error);
+      setError(error.message || 'Failed to load dashboard data');
       showToast('Failed to load dashboard data', 'error');
     } finally {
       setLoading(false);
@@ -48,6 +49,7 @@ export default function DashboardPage() {
     if (tenantId) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   if (loading) {

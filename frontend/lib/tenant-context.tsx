@@ -107,6 +107,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, token]);
 
   return (

@@ -26,6 +26,7 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (err) {
       setError('Invalid username or password');
+      console.error('Login failed:', err);
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
               Sign up
             </Link>

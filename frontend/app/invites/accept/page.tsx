@@ -3,11 +3,10 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { ApiClient } from '@/lib/api';
+import { ApiClient, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import ErrorMessage from '@/components/ErrorMessage';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -62,9 +61,10 @@ function InviteAcceptContent() {
 
       // Redirect to workspaces
       router.push('/workspaces');
-    } catch (err: any) {
-      console.error('Failed to accept invitation:', err);
-      showToast(err.message || 'Failed to accept invitation', 'error');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to accept invitation:', error);
+      showToast(error.message || 'Failed to accept invitation', 'error');
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ function InviteAcceptContent() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Accept Invitation</h1>
           <p className="text-gray-600 mt-2">
-            You've been invited to join a workspace
+            You&apos;ve been invited to join a workspace
           </p>
         </div>
 
@@ -92,7 +92,7 @@ function InviteAcceptContent() {
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                You're logged in as <strong>{user.username}</strong>
+                You&apos;re logged in as <strong>{user.username}</strong>
               </p>
             </div>
             <Button

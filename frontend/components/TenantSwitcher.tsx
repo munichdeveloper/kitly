@@ -40,7 +40,9 @@ export default function TenantSwitcher() {
       setIsOpen(false);
       // Reload the page to refresh data
       window.location.reload();
-    } catch (error) {
+    } catch (err) {
+      const switchError = err as Error;
+      console.error('Failed to switch workspace:', switchError);
       showToast('Failed to switch workspace', 'error');
     }
   };

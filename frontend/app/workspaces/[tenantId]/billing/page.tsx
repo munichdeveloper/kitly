@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ApiClient } from '@/lib/api';
+import { ApiClient, ApiError } from '@/lib/api';
 import { EntitlementResponse, MembershipResponse, PlanDefinition } from '@/lib/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
@@ -35,9 +35,10 @@ export default function BillingPage() {
       setEntitlements(entitlementsData);
       setMembers(membersData);
       setPlans(plansData);
-    } catch (err: any) {
-      console.error('Failed to load billing data:', err);
-      setError(err.message || 'Failed to load billing data');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to load billing data:', error);
+      setError(error.message || 'Failed to load billing data');
       showToast('Failed to load billing data', 'error');
     } finally {
       setLoading(false);
@@ -48,6 +49,7 @@ export default function BillingPage() {
     if (tenantId) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   if (loading) {

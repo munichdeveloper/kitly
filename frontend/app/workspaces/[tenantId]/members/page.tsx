@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { ApiClient } from '@/lib/api';
+import { ApiClient, ApiError } from '@/lib/api';
 import { MembershipResponse, InvitationRequest, EntitlementResponse } from '@/lib/types';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
@@ -46,9 +46,10 @@ export default function MembersPage() {
 
       setMembers(membersData);
       setEntitlements(entitlementsData);
-    } catch (err: any) {
-      console.error('Failed to load members:', err);
-      setError(err.message || 'Failed to load members');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to load members:', error);
+      setError(error.message || 'Failed to load members');
     } finally {
       setLoading(false);
     }
@@ -58,6 +59,7 @@ export default function MembersPage() {
     if (tenantId) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const handleInviteMember = async (data: InvitationRequest) => {
@@ -69,9 +71,10 @@ export default function MembersPage() {
       setIsInviteModalOpen(false);
       reset();
       loadData();
-    } catch (err: any) {
-      console.error('Failed to send invitation:', err);
-      showToast(err.message || 'Failed to send invitation', 'error');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to send invitation:', error);
+      showToast(error.message || 'Failed to send invitation', 'error');
     } finally {
       setInviting(false);
     }
@@ -82,9 +85,10 @@ export default function MembersPage() {
       await ApiClient.updateMember(tenantId, userId, { role, status });
       showToast('Member updated successfully', 'success');
       loadData();
-    } catch (err: any) {
-      console.error('Failed to update member:', err);
-      showToast(err.message || 'Failed to update member', 'error');
+    } catch (err) {
+      const error = err as ApiError;
+      console.error('Failed to update member:', error);
+      showToast(error.message || 'Failed to update member', 'error');
     }
   };
 

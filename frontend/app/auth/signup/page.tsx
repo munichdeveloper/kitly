@@ -55,6 +55,7 @@ export default function SignupPage() {
       );
       router.push('/dashboard');
     } catch (err) {
+      console.error('Signup failed:', err);
       setError('Failed to create account. Username or email may already exist.');
     } finally {
       setLoading(false);
