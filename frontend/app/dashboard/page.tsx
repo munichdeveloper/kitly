@@ -112,6 +112,14 @@ export default function DashboardPage() {
             <div className="space-y-2">
               <h4 className="font-medium text-gray-900">Quick Links:</h4>
               <ul className="list-disc list-inside text-gray-600 space-y-1">
+                <li>
+                  <button 
+                    onClick={() => router.push('/subscriptions')}
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    View Subscription & Billing
+                  </button>
+                </li>
                 <li>Update your profile information</li>
                 <li>Configure application settings</li>
                 <li>View analytics and reports</li>
