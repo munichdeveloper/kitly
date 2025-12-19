@@ -65,10 +65,14 @@ public class EntitlementService {
      * Get current entitlements for a tenant
      */
     public Entitlements getTenantEntitlements(UUID tenantId) {
+        // Find subscription with ACTIVE or TRIALING status
         Subscription subscription = subscriptionRepository.findByTenantIdAndStatus(
                 tenantId, 
                 Subscription.SubscriptionStatus.ACTIVE
-        ).orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
+        ).or(() -> subscriptionRepository.findByTenantIdAndStatus(
+                tenantId,
+                Subscription.SubscriptionStatus.TRIALING
+        )).orElseThrow(() -> new ResourceNotFoundException("No active or trialing subscription found"));
         
         return Entitlements.builder()
                 .tenantId(tenantId)
