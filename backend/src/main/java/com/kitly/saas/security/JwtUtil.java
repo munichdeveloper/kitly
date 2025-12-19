@@ -53,6 +53,19 @@ public class JwtUtil {
         return createToken(claims, userDetails.getUsername());
     }
     
+    public String generateToken(UserDetails userDetails, java.util.UUID tenantId) {
+        Map<String, Object> claims = new HashMap<>();
+        if (tenantId != null) {
+            claims.put("tenantId", tenantId.toString());
+        }
+        return createToken(claims, userDetails.getUsername());
+    }
+    
+    public java.util.UUID extractTenantId(String token) {
+        String tenantIdStr = extractClaim(token, claims -> claims.get("tenantId", String.class));
+        return tenantIdStr != null ? java.util.UUID.fromString(tenantIdStr) : null;
+    }
+    
     private String createToken(Map<String, Object> claims, String subject) {
         return Jwts.builder()
                 .claims(claims)
