@@ -1,4 +1,4 @@
-package com.kitly.saas.exception;
+package com.kitly.saas.common.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

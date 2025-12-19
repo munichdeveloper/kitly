@@ -1,4 +1,4 @@
-package com.kitly.saas.context;
+package com.kitly.saas.common.context;
 
 import java.util.UUID;
 

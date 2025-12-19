@@ -1,7 +1,7 @@
 package com.kitly.saas.service;
 
 import com.kitly.saas.entity.Subscription;
-import com.kitly.saas.exception.ResourceNotFoundException;
+import com.kitly.saas.common.exception.ResourceNotFoundException;
 import com.kitly.saas.repository.SubscriptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

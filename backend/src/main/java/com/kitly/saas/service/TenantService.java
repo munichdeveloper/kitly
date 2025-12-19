@@ -1,15 +1,15 @@
 package com.kitly.saas.service;
 
-import com.kitly.saas.context.TenantContextHolder;
+import com.kitly.saas.common.context.TenantContextHolder;
 import com.kitly.saas.dto.TenantRequest;
 import com.kitly.saas.dto.TenantResponse;
 import com.kitly.saas.entity.Membership;
 import com.kitly.saas.entity.Subscription;
 import com.kitly.saas.entity.Tenant;
 import com.kitly.saas.entity.User;
-import com.kitly.saas.exception.BadRequestException;
-import com.kitly.saas.exception.ResourceNotFoundException;
-import com.kitly.saas.exception.UnauthorizedException;
+import com.kitly.saas.common.exception.BadRequestException;
+import com.kitly.saas.common.exception.ResourceNotFoundException;
+import com.kitly.saas.common.exception.UnauthorizedException;
 import com.kitly.saas.repository.MembershipRepository;
 import com.kitly.saas.repository.SubscriptionRepository;
 import com.kitly.saas.repository.TenantRepository;

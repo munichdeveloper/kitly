@@ -1,4 +1,4 @@
-package com.kitly.saas.exception;
+package com.kitly.saas.common.exception;
 
 public class UnauthorizedException extends RuntimeException {
     

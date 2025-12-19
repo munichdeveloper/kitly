@@ -1,4 +1,4 @@
-package com.kitly.saas.exception;
+package com.kitly.saas.common.exception;
 
 /**
  * Exception thrown when a user attempts to access a tenant they don't have access to.

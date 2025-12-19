@@ -1,7 +1,7 @@
 package com.kitly.saas.security;
 
-import com.kitly.saas.context.TenantContext;
-import com.kitly.saas.context.TenantContextHolder;
+import com.kitly.saas.common.context.TenantContext;
+import com.kitly.saas.common.context.TenantContextHolder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
