@@ -35,6 +35,7 @@ public class InviteService {
     private final RoleRepository roleRepository;
     private final MailSender mailSender;
     private final PasswordEncoder passwordEncoder;
+    private final com.kitly.saas.service.EntitlementService entitlementService;
     private final SecureRandom secureRandom = new SecureRandom();
     
     public InviteService(InvitationRepository invitationRepository,
@@ -44,7 +45,8 @@ public class InviteService {
                         SubscriptionRepository subscriptionRepository,
                         RoleRepository roleRepository,
                         MailSender mailSender,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder,
+                        com.kitly.saas.service.EntitlementService entitlementService) {
         this.invitationRepository = invitationRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
@@ -53,6 +55,7 @@ public class InviteService {
         this.roleRepository = roleRepository;
         this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
+        this.entitlementService = entitlementService;
     }
     
     @Transactional
@@ -234,14 +237,8 @@ public class InviteService {
     }
     
     private void bumpEntitlementVersion(UUID tenantId) {
-        Subscription subscription = subscriptionRepository.findByTenantIdAndStatus(
-                tenantId, 
-                Subscription.SubscriptionStatus.ACTIVE
-        ).orElseThrow(() -> new BadRequestException("No active subscription found"));
-        
-        // Save the subscription to trigger @Version increment automatically
-        // The @Version annotation will handle optimistic locking
-        subscriptionRepository.save(subscription);
+        // Delegate to EntitlementService for version bumping
+        entitlementService.bumpEntitlementVersion(tenantId);
     }
     
     private User createUser(String email) {

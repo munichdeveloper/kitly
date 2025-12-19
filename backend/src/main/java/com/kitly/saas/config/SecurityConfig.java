@@ -26,10 +26,14 @@ public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final com.kitly.saas.security.TenantContextFilter tenantContextFilter;
 
-    public SecurityConfig(UserDetailsService userDetailsService, JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(UserDetailsService userDetailsService, 
+                         JwtAuthenticationFilter jwtAuthenticationFilter,
+                         com.kitly.saas.security.TenantContextFilter tenantContextFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.tenantContextFilter = tenantContextFilter;
     }
 
     @Bean
@@ -40,7 +44,7 @@ public class SecurityConfig {
                 // CSRF protection is primarily needed for session-based authentication
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -48,6 +52,7 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(tenantContextFilter, JwtAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
 
         return http.build();
