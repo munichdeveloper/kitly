@@ -5,10 +5,10 @@ CREATE TABLE tenants (
     slug VARCHAR(100) NOT NULL UNIQUE,
     domain VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
-    owner_id UUID NOT NULL,
+    owner_id UUID,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tenant_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_tenant_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Add tenant relationship to users

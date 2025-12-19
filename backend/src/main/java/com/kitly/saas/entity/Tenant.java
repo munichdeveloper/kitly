@@ -42,7 +42,7 @@ public class Tenant {
     private TenantStatus status = TenantStatus.ACTIVE;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id")
     private User owner;
     
     @Column(name = "created_at", nullable = false, updatable = false)
