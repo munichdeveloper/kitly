@@ -76,7 +76,7 @@ public class TenantService {
         Subscription subscription = Subscription.builder()
                 .tenant(tenant)
                 .plan(Subscription.SubscriptionPlan.FREE)
-                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .status(Subscription.SubscriptionStatus.TRIALING)
                 .startsAt(LocalDateTime.now())
                 .trialEndsAt(LocalDateTime.now().plusDays(14))
                 .currency("USD")
