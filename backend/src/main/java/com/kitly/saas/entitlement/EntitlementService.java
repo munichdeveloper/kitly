@@ -114,7 +114,7 @@ public class EntitlementService {
                 .orElseGet(() -> {
                     EntitlementVersion newVersion = EntitlementVersion.builder()
                             .tenant(tenant)
-                            .version(0L)
+                            .version(1L)
                             .build();
                     return entitlementVersionRepository.save(newVersion);
                 });
@@ -136,13 +136,14 @@ public class EntitlementService {
     
     /**
      * Map Subscription.SubscriptionPlan enum to plan catalog code
+     * Note: FREE plan maps to 'starter' as it uses the same entitlements
      */
     private String mapSubscriptionPlanToPlanCode(Subscription.SubscriptionPlan plan) {
         return switch (plan) {
             case STARTER -> "starter";
             case PROFESSIONAL -> "pro";
             case ENTERPRISE -> "enterprise";
-            case FREE -> "starter"; // Default FREE to starter
+            case FREE -> "starter"; // FREE uses starter entitlements
         };
     }
     

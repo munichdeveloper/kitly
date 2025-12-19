@@ -8,8 +8,10 @@ import com.kitly.saas.entity.User;
 import com.kitly.saas.common.exception.BadRequestException;
 import com.kitly.saas.common.exception.ResourceNotFoundException;
 import com.kitly.saas.common.exception.UnauthorizedException;
+import com.kitly.saas.entitlement.listener.EntitlementVersionBumpEvent;
 import com.kitly.saas.repository.MembershipRepository;
 import com.kitly.saas.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +24,14 @@ public class MembershipService {
     
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     public MembershipService(MembershipRepository membershipRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            ApplicationEventPublisher eventPublisher) {
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
     }
     
     public List<MembershipResponse> getTenantMembers(UUID tenantId) {
@@ -82,6 +87,9 @@ public class MembershipService {
         }
         
         membership = membershipRepository.save(membership);
+        
+        // Publish event to bump entitlement version
+        eventPublisher.publishEvent(new EntitlementVersionBumpEvent(tenantId));
         
         return mapToMembershipResponse(membership);
     }
