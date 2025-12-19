@@ -38,9 +38,10 @@ public class OutboxService {
      * @param aggregateType The type of aggregate (e.g., "Tenant", "Membership")
      * @param aggregateId The ID of the aggregate
      * @param payload The event payload
+     * @return The saved OutboxEvent
      */
     @Transactional
-    public void publish(String eventType, String aggregateType, UUID aggregateId, Map<String, Object> payload) {
+    public OutboxEvent publish(String eventType, String aggregateType, UUID aggregateId, Map<String, Object> payload) {
         OutboxEvent event = OutboxEvent.builder()
                 .eventType(eventType)
                 .aggregateType(aggregateType)
@@ -50,14 +51,17 @@ public class OutboxService {
                 .retryCount(0)
                 .build();
         
-        outboxEventRepository.save(event);
+        OutboxEvent saved = outboxEventRepository.save(event);
         
         logger.debug("Published outbox event: type={}, aggregateType={}, aggregateId={}", 
                 eventType, aggregateType, aggregateId);
+        
+        return saved;
     }
     
     /**
      * Publish an event to the outbox (alternative method signature for compatibility).
+     * Delegates to the publish method with swapped parameter order.
      * 
      * @param aggregateType The type of aggregate
      * @param aggregateId The ID of the aggregate
@@ -70,16 +74,8 @@ public class OutboxService {
         logger.info("Publishing event - aggregateType: {}, aggregateId: {}, eventType: {}", 
                 aggregateType, aggregateId, eventType);
         
-        OutboxEvent event = OutboxEvent.builder()
-                .aggregateType(aggregateType)
-                .aggregateId(aggregateId)
-                .eventType(eventType)
-                .payload(payload)
-                .status(OutboxEvent.OutboxStatus.PENDING)
-                .retryCount(0)
-                .build();
-        
-        return outboxEventRepository.save(event);
+        // Delegate to publish with swapped parameter order
+        return publish(eventType, aggregateType, aggregateId, payload);
     }
     
     /**
@@ -125,17 +121,20 @@ public class OutboxService {
     
     /**
      * Publish event to external system.
-     * Currently logs the event, but can be extended to publish to:
-     * - Message queue (RabbitMQ, Kafka)
-     * - External webhook endpoint
-     * - Analytics service
-     * - Email service
+     * This is a placeholder implementation that logs the event.
+     * 
+     * In a production system, implement actual publishing logic here to:
+     * - Publish to message queue (RabbitMQ, Kafka)
+     * - Send to external webhook endpoint
+     * - Forward to analytics service
+     * - Trigger email notifications
+     * - etc.
      */
     private void publishToExternalSystem(OutboxEvent event) {
         logger.info("Publishing event to external system: {} - {}", event.getEventType(), event.getId());
         
-        // Simulate successful processing
-        // In production, implement actual publishing logic here
+        // Placeholder: Currently logs the event. 
+        // Replace with actual integration code for production use.
     }
     
     /**
