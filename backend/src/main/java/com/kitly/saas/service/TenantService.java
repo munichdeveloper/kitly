@@ -88,11 +88,7 @@ public class TenantService {
     }
     
     public TenantResponse getTenantById(UUID tenantId) {
-        // Validate tenant context
-        UUID contextTenantId = TenantContextHolder.getTenantId();
-        if (contextTenantId != null && !contextTenantId.equals(tenantId)) {
-            throw new UnauthorizedException("Access denied to this tenant");
-        }
+        validateTenantAccess(tenantId);
         
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
@@ -113,6 +109,13 @@ public class TenantService {
                 .filter(m -> m.getStatus() == Membership.MembershipStatus.ACTIVE)
                 .map(m -> mapToTenantResponse(m.getTenant()))
                 .collect(Collectors.toList());
+    }
+    
+    private void validateTenantAccess(UUID tenantId) {
+        UUID contextTenantId = TenantContextHolder.getTenantId();
+        if (contextTenantId != null && !contextTenantId.equals(tenantId)) {
+            throw new UnauthorizedException("Access denied to this tenant");
+        }
     }
     
     private TenantResponse mapToTenantResponse(Tenant tenant) {

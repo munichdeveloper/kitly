@@ -30,11 +30,7 @@ public class MembershipService {
     }
     
     public List<MembershipResponse> getTenantMembers(UUID tenantId) {
-        // Validate tenant context
-        UUID contextTenantId = TenantContextHolder.getTenantId();
-        if (contextTenantId != null && !contextTenantId.equals(tenantId)) {
-            throw new UnauthorizedException("Access denied to this tenant");
-        }
+        validateTenantAccess(tenantId);
         
         List<Membership> memberships = membershipRepository.findByTenantId(tenantId);
         
@@ -46,11 +42,7 @@ public class MembershipService {
     @Transactional
     public MembershipResponse updateMember(UUID tenantId, UUID userId, 
                                           UpdateMemberRequest request, String currentUsername) {
-        // Validate tenant context
-        UUID contextTenantId = TenantContextHolder.getTenantId();
-        if (contextTenantId != null && !contextTenantId.equals(tenantId)) {
-            throw new UnauthorizedException("Access denied to this tenant");
-        }
+        validateTenantAccess(tenantId);
         
         // Get current user's membership
         User currentUser = userRepository.findByUsername(currentUsername)
@@ -71,11 +63,10 @@ public class MembershipService {
         
         // Prevent modifying the last OWNER
         if (membership.getRole() == Membership.MembershipRole.OWNER) {
-            long ownerCount = membershipRepository.findByTenantIdAndRole(tenantId, Membership.MembershipRole.OWNER)
-                    .size();
+            long ownerCount = membershipRepository.countByTenantIdAndRole(tenantId, Membership.MembershipRole.OWNER);
             
             if (ownerCount == 1 && request.getRole() != null && 
-                !request.getRole().equals("OWNER")) {
+                !request.getRole().equals(Membership.MembershipRole.OWNER.name())) {
                 throw new BadRequestException("Cannot change role of the last OWNER");
             }
         }
@@ -93,6 +84,13 @@ public class MembershipService {
         membership = membershipRepository.save(membership);
         
         return mapToMembershipResponse(membership);
+    }
+    
+    private void validateTenantAccess(UUID tenantId) {
+        UUID contextTenantId = TenantContextHolder.getTenantId();
+        if (contextTenantId != null && !contextTenantId.equals(tenantId)) {
+            throw new UnauthorizedException("Access denied to this tenant");
+        }
     }
     
     private MembershipResponse mapToMembershipResponse(Membership membership) {

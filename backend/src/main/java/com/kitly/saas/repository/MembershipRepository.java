@@ -23,5 +23,7 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
     
     List<Membership> findByTenantIdAndRole(UUID tenantId, MembershipRole role);
     
+    long countByTenantIdAndRole(UUID tenantId, MembershipRole role);
+    
     boolean existsByTenantIdAndUserId(UUID tenantId, UUID userId);
 }
