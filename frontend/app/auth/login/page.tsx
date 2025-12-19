@@ -23,10 +23,11 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
+      console.log('Redirecting to dashboard...');
       router.push('/dashboard');
-    } catch (err) {
-      setError('Invalid username or password');
+    } catch (err: any) {
       console.error('Login failed:', err);
+      setError(err.message || 'Invalid username or password');
     } finally {
       setLoading(false);
     }

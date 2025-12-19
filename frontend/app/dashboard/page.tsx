@@ -11,7 +11,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Dashboard check:', { loading, user });
     if (!loading && !user) {
+      console.log('Redirecting to login from dashboard');
       router.push('/auth/login');
     }
   }, [user, loading, router]);
