@@ -88,6 +88,7 @@ public class Subscription {
     
     public enum SubscriptionStatus {
         ACTIVE,
+        TRIALING,
         CANCELLED,
         EXPIRED,
         PAST_DUE
