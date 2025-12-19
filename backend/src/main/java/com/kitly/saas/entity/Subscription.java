@@ -65,12 +65,23 @@ public class Subscription {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Column(name = "max_seats")
+    private Integer maxSeats;
+    
+    @Version
+    @Column(name = "entitlement_version")
+    private Long entitlementVersion;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (startsAt == null) {
             startsAt = LocalDateTime.now();
+        }
+        // Set default max seats based on plan
+        if (maxSeats == null) {
+            maxSeats = getDefaultMaxSeats(plan);
         }
     }
     
@@ -97,5 +108,14 @@ public class Subscription {
     public enum BillingCycle {
         MONTHLY,
         YEARLY
+    }
+    
+    private Integer getDefaultMaxSeats(SubscriptionPlan plan) {
+        return switch (plan) {
+            case FREE -> 3;
+            case STARTER -> 10;
+            case PROFESSIONAL -> 50;
+            case ENTERPRISE -> null; // Unlimited
+        };
     }
 }
