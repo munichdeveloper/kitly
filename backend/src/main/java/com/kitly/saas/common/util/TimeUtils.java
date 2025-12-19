@@ -114,7 +114,7 @@ public final class TimeUtils {
         if (localDateTime == null) {
             return null;
         }
-        return localDateTime.toLocalDate().atTime(23, 59, 59, 999999999);
+        return localDateTime.toLocalDate().atTime(java.time.LocalTime.MAX);
     }
     
     /**
