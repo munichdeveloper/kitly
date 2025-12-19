@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "entitlement_versions", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"tenant_id"})
+    @UniqueConstraint(name = "unique_tenant_version", columnNames = {"tenant_id"})
 })
 @Data
 @NoArgsConstructor

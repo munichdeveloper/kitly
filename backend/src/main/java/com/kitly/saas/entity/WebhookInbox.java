@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "webhook_inbox", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"provider", "event_id"})
+    @UniqueConstraint(name = "unique_provider_event", columnNames = {"provider", "event_id"})
 })
 @Data
 @NoArgsConstructor

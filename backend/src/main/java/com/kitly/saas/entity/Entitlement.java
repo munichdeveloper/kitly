@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "entitlements", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"tenant_id", "feature_key"})
+    @UniqueConstraint(name = "unique_tenant_feature", columnNames = {"tenant_id", "feature_key"})
 })
 @Data
 @NoArgsConstructor
