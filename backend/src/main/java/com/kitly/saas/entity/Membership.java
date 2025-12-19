@@ -13,6 +13,7 @@ import java.util.UUID;
 @Table(name = "memberships", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"tenant_id", "user_id"})
 })
+@EntityListeners(com.kitly.saas.entitlement.listener.MembershipEntityListener.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

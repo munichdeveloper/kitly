@@ -12,6 +12,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "subscriptions")
+@EntityListeners(com.kitly.saas.entitlement.listener.SubscriptionEntityListener.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
