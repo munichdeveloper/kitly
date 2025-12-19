@@ -21,7 +21,7 @@ export interface AuthResponse {
 }
 
 export interface UserResponse {
-  id: number;
+  id: string;
   username: string;
   email: string;
   firstName?: string;
@@ -33,6 +33,11 @@ export interface UserResponse {
 
 export class ApiClient {
   private static getAuthHeader(): HeadersInit {
+    if (typeof window === 'undefined') {
+      return {
+        'Content-Type': 'application/json',
+      };
+    }
     const token = localStorage.getItem('token');
     if (token) {
       return {
