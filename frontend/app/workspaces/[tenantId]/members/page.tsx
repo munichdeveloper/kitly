@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { ApiClient, ApiError } from '@/lib/api';
@@ -34,7 +34,7 @@ export default function MembersPage() {
     formState: { errors },
   } = useForm<InvitationRequest>();
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -53,14 +53,13 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) {
       loadData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [tenantId, loadData]);
 
   const handleInviteMember = async (data: InvitationRequest) => {
     setInviting(true);

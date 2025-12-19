@@ -159,7 +159,14 @@ export interface Toast {
   duration?: number;
 }
 
+/** Member role types */
 export type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+
+/** Member status - ACTIVE members count towards seat limit, INACTIVE members do not */
 export type MemberStatus = 'ACTIVE' | 'INACTIVE';
+
+/** Invitation status - PENDING invites can be accepted, ACCEPTED invites have been used, EXPIRED invites can no longer be accepted */
 export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+
+/** Tenant status - ACTIVE tenants are operational, SUSPENDED tenants have limited access, DELETED tenants are archived */
 export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';

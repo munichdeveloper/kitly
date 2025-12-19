@@ -23,7 +23,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     type: Toast['type'] = 'info',
     duration: number = 5000
   ) => {
-    const id = Math.random().toString(36).substring(7);
+    // Use crypto.randomUUID if available, fallback to timestamp-based ID
+    const id = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newToast: Toast = { id, message, type, duration };
     
     setToasts(prev => [...prev, newToast]);
