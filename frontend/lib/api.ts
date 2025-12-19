@@ -1,34 +1,53 @@
+import {
+  LoginData,
+  SignupData,
+  AuthResponse,
+  UserResponse,
+  TenantResponse,
+  TenantRequest,
+  SessionResponse,
+  CurrentSessionResponse,
+  RefreshTokenResponse,
+  SwitchTenantRequest,
+  MembershipResponse,
+  UpdateMemberRequest,
+  InvitationRequest,
+  InvitationResponse,
+  CreateInviteResponse,
+  AcceptInviteRequest,
+  EntitlementResponse,
+  PlanDefinition,
+} from './types';
+
+// Re-export types for convenience
+export type {
+  LoginData,
+  SignupData,
+  AuthResponse,
+  UserResponse,
+  TenantResponse,
+  TenantRequest,
+  SessionResponse,
+  CurrentSessionResponse,
+  RefreshTokenResponse,
+  SwitchTenantRequest,
+  MembershipResponse,
+  UpdateMemberRequest,
+  InvitationRequest,
+  InvitationResponse,
+  CreateInviteResponse,
+  AcceptInviteRequest,
+  EntitlementResponse,
+  PlanDefinition,
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
-export interface LoginData {
-  username: string;
-  password: string;
-}
-
-export interface SignupData {
-  username: string;
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  type: string;
-  username: string;
-  email: string;
-}
-
-export interface UserResponse {
-  id: string;
-  username: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  roles: string[];
-  createdAt: string;
-  isActive: boolean;
+export class ApiError extends Error {
+  constructor(public status: number, message: string, public data?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+  }
 }
 
 export class ApiClient {
@@ -50,6 +69,31 @@ export class ApiClient {
     };
   }
 
+  private static async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      let errorMessage = `Request failed with status ${response.status}`;
+      let errorData;
+      
+      try {
+        errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      throw new ApiError(response.status, errorMessage, errorData);
+    }
+    
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return {} as T;
+    }
+    
+    return response.json();
+  }
+
+  // ========== Auth APIs ==========
   static async login(data: LoginData): Promise<AuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -58,12 +102,7 @@ export class ApiClient {
       },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      throw new Error('Login failed');
-    }
-
-    return response.json();
+    return this.handleResponse<AuthResponse>(response);
   }
 
   static async signup(data: SignupData): Promise<AuthResponse> {
@@ -74,12 +113,7 @@ export class ApiClient {
       },
       body: JSON.stringify(data),
     });
-
-    if (!response.ok) {
-      throw new Error('Signup failed');
-    }
-
-    return response.json();
+    return this.handleResponse<AuthResponse>(response);
   }
 
   static async getCurrentUser(): Promise<UserResponse> {
@@ -87,19 +121,142 @@ export class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader(),
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch user');
-    }
-
-    return response.json();
+    return this.handleResponse<UserResponse>(response);
   }
 
+  // ========== Tenant APIs ==========
+  static async createTenant(data: TenantRequest): Promise<TenantResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<TenantResponse>(response);
+  }
+
+  static async getTenant(tenantId: string): Promise<TenantResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<TenantResponse>(response);
+  }
+
+  static async getUserTenants(): Promise<TenantResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/me/tenants`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<TenantResponse[]>(response);
+  }
+
+  // ========== Session APIs ==========
+  static async switchTenant(data: SwitchTenantRequest): Promise<SessionResponse> {
+    const response = await fetch(`${API_BASE_URL}/sessions/switch-tenant`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<SessionResponse>(response);
+  }
+
+  static async refreshSession(): Promise<RefreshTokenResponse> {
+    const response = await fetch(`${API_BASE_URL}/sessions/refresh`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<RefreshTokenResponse>(response);
+  }
+
+  static async getCurrentSession(): Promise<CurrentSessionResponse> {
+    const response = await fetch(`${API_BASE_URL}/sessions/current`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<CurrentSessionResponse>(response);
+  }
+
+  // ========== Member APIs ==========
+  static async getTenantMembers(tenantId: string): Promise<MembershipResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/members`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<MembershipResponse[]>(response);
+  }
+
+  static async updateMember(
+    tenantId: string,
+    userId: string,
+    data: UpdateMemberRequest
+  ): Promise<MembershipResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/members/${userId}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<MembershipResponse>(response);
+  }
+
+  // ========== Invite APIs ==========
+  static async createInvite(tenantId: string, data: InvitationRequest): Promise<CreateInviteResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/invites`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<CreateInviteResponse>(response);
+  }
+
+  static async getPendingInvites(tenantId: string): Promise<InvitationResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/invites`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<InvitationResponse[]>(response);
+  }
+
+  static async acceptInvite(data: AcceptInviteRequest): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/invites/accept`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  // ========== Entitlement APIs ==========
+  static async getTenantEntitlements(tenantId: string): Promise<EntitlementResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/entitlements`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<EntitlementResponse>(response);
+  }
+
+  static async getMyEntitlements(): Promise<EntitlementResponse> {
+    const response = await fetch(`${API_BASE_URL}/entitlements/me`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<EntitlementResponse>(response);
+  }
+
+  static async getPlanCatalog(): Promise<Record<string, PlanDefinition>> {
+    const response = await fetch(`${API_BASE_URL}/plans`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return this.handleResponse<Record<string, PlanDefinition>>(response);
+  }
+
+  // ========== Health Check ==========
   static async checkHealth(): Promise<{ status: string; application: string }> {
     const response = await fetch(`${API_BASE_URL}/health`);
-    if (!response.ok) {
-      throw new Error('Health check failed');
-    }
-    return response.json();
+    return this.handleResponse<{ status: string; application: string }>(response);
   }
 }

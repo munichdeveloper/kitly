@@ -24,13 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      loadUser(storedToken);
+      loadUser();
     } else {
       setLoading(false);
     }
   }, []);
 
-  const loadUser = async (authToken: string) => {
+  const loadUser = async () => {
     try {
       const userData = await ApiClient.getCurrentUser();
       setUser(userData);
@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response: AuthResponse = await ApiClient.login({ username, password });
       localStorage.setItem('token', response.token);
       setToken(response.token);
-      await loadUser(response.token);
+      await loadUser();
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       localStorage.setItem('token', response.token);
       setToken(response.token);
-      await loadUser(response.token);
+      await loadUser();
     } catch (error) {
       console.error('Signup failed:', error);
       throw error;

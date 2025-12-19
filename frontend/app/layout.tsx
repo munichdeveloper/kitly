@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { TenantProvider } from "@/lib/tenant-context";
+import { ToastProvider } from "@/lib/toast-context";
+import ToastContainer from "@/components/ToastContainer";
 
 export const metadata: Metadata = {
-  title: "Kitly - SaaS Platform",
-  description: "A modern SaaS platform with Spring Boot and Next.js",
+  title: "Kitly - B2B SaaS Platform",
+  description: "A modern B2B SaaS platform with workspace management",
 };
 
 export default function RootLayout({
@@ -15,9 +18,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <TenantProvider>
+              {children}
+              <ToastContainer />
+            </TenantProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );
