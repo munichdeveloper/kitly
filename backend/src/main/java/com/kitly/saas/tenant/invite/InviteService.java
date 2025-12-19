@@ -35,7 +35,7 @@ public class InviteService {
     private final RoleRepository roleRepository;
     private final MailSender mailSender;
     private final PasswordEncoder passwordEncoder;
-    private final com.kitly.saas.service.EntitlementService entitlementService;
+    private final com.kitly.saas.entitlement.EntitlementService entitlementService;
     private final SecureRandom secureRandom = new SecureRandom();
     
     public InviteService(InvitationRepository invitationRepository,
@@ -46,7 +46,7 @@ public class InviteService {
                         RoleRepository roleRepository,
                         MailSender mailSender,
                         PasswordEncoder passwordEncoder,
-                        com.kitly.saas.service.EntitlementService entitlementService) {
+                        com.kitly.saas.entitlement.EntitlementService entitlementService) {
         this.invitationRepository = invitationRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
