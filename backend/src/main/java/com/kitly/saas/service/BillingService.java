@@ -1,6 +1,7 @@
 package com.kitly.saas.service;
 
 import com.kitly.saas.common.exception.ResourceNotFoundException;
+import com.kitly.saas.common.outbox.OutboxService;
 import com.kitly.saas.entity.Subscription;
 import com.kitly.saas.entity.Tenant;
 import com.kitly.saas.repository.SubscriptionRepository;
