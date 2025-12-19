@@ -19,6 +19,28 @@ import {
   PlanDefinition,
 } from './types';
 
+// Re-export types for convenience
+export type {
+  LoginData,
+  SignupData,
+  AuthResponse,
+  UserResponse,
+  TenantResponse,
+  TenantRequest,
+  SessionResponse,
+  CurrentSessionResponse,
+  RefreshTokenResponse,
+  SwitchTenantRequest,
+  MembershipResponse,
+  UpdateMemberRequest,
+  InvitationRequest,
+  InvitationResponse,
+  CreateInviteResponse,
+  AcceptInviteRequest,
+  EntitlementResponse,
+  PlanDefinition,
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 export class ApiError extends Error {
