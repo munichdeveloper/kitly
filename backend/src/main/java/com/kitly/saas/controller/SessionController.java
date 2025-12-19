@@ -1,5 +1,6 @@
 package com.kitly.saas.controller;
 
+import com.kitly.saas.common.exception.BadRequestException;
 import com.kitly.saas.dto.CurrentSessionResponse;
 import com.kitly.saas.dto.RefreshTokenResponse;
 import com.kitly.saas.dto.SessionResponse;
@@ -49,16 +50,7 @@ public class SessionController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         
-        // Extract token from Authorization header
-        String token = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-        }
-        
-        if (token == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        
+        String token = extractTokenFromHeader(authHeader);
         RefreshTokenResponse response = sessionService.refreshSession(token, username);
         return ResponseEntity.ok(response);
     }
@@ -74,17 +66,22 @@ public class SessionController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
         
-        // Extract token from Authorization header
-        String token = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-        }
-        
-        if (token == null) {
-            return ResponseEntity.badRequest().build();
-        }
-        
+        String token = extractTokenFromHeader(authHeader);
         CurrentSessionResponse response = sessionService.getCurrentSession(token, username);
         return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Extract JWT token from Authorization header.
+     *
+     * @param authHeader Authorization header value
+     * @return JWT token string
+     * @throws BadRequestException if header is missing or invalid
+     */
+    private String extractTokenFromHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new BadRequestException("Missing or invalid Authorization header. Expected format: 'Bearer <token>'");
+        }
+        return authHeader.substring(7);
     }
 }

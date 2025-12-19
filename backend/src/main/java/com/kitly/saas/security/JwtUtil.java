@@ -50,13 +50,19 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (Exception e) {
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
             // If session key fails, try regular key
-            return Jwts.parser()
-                    .verifyWith(getSigningKey())
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
+            // This allows supporting both session tokens and legacy IdP tokens
+            try {
+                return Jwts.parser()
+                        .verifyWith(getSigningKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+            } catch (io.jsonwebtoken.JwtException ex) {
+                // Log and rethrow for security monitoring
+                throw new io.jsonwebtoken.JwtException("Failed to parse JWT token with both session and regular keys", ex);
+            }
         }
     }
     
