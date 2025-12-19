@@ -31,7 +31,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
     
-    public UserResponse getUserById(Long id) {
+    public UserResponse getUserById(java.util.UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         

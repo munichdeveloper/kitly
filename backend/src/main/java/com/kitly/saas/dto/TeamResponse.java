@@ -6,21 +6,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
+public class TeamResponse {
     
     private UUID id;
-    private String username;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private Set<String> roles;
+    private UUID tenantId;
+    private String name;
+    private String description;
+    private String status;
+    private UUID createdBy;
     private LocalDateTime createdAt;
-    private Boolean isActive;
+    private LocalDateTime updatedAt;
 }

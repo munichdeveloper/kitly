@@ -6,21 +6,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
+public class TenantResponse {
     
     private UUID id;
-    private String username;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private Set<String> roles;
+    private String name;
+    private String slug;
+    private String domain;
+    private String status;
+    private UUID ownerId;
     private LocalDateTime createdAt;
-    private Boolean isActive;
+    private LocalDateTime updatedAt;
 }
