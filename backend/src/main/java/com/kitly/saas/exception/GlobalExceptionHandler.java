@@ -2,6 +2,7 @@ package com.kitly.saas.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -46,6 +47,19 @@ public class GlobalExceptionHandler {
                 .error("Forbidden")
                 .message(ex.getMessage())
                 .code("TENANT_ACCESS_DENIED")
+                .details(new HashMap<>())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+    
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Forbidden")
+                .message("Access denied: Insufficient permissions")
+                .code("ACCESS_DENIED")
                 .details(new HashMap<>())
                 .build();
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);

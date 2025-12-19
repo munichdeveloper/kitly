@@ -50,9 +50,10 @@ public class TenantAccessCheckAspect {
         }
         
         if (pathTenantId == null) {
-            // If no tenantId path variable found, allow the request
-            // This could be an endpoint that doesn't have tenantId in path
-            return;
+            // If @TenantAccessCheck is present but no tenantId found, this is a misconfiguration
+            throw new TenantAccessDeniedException(
+                    "@TenantAccessCheck annotation requires a 'tenantId' path variable"
+            );
         }
         
         if (!contextTenantId.equals(pathTenantId)) {
