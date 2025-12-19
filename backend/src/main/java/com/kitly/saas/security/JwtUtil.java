@@ -43,11 +43,21 @@ public class JwtUtil {
     }
     
     private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        // Try to parse with session key first, then fall back to regular key
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSessionSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (Exception e) {
+            // If session key fails, try regular key
+            return Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        }
     }
     
     private Boolean isTokenExpired(String token) {

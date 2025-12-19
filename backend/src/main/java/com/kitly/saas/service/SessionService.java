@@ -1,6 +1,5 @@
 package com.kitly.saas.service;
 
-import com.kitly.saas.common.context.TenantContextHolder;
 import com.kitly.saas.common.exception.BadRequestException;
 import com.kitly.saas.common.exception.ResourceNotFoundException;
 import com.kitly.saas.common.exception.UnauthorizedException;
