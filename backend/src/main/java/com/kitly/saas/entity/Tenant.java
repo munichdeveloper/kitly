@@ -1,7 +1,6 @@
 package com.kitly.saas.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -10,65 +9,47 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "tenants")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class Tenant {
     
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
     
     @NotBlank
-    @Size(max = 50)
-    @Column(unique = true)
-    private String username;
+    @Size(max = 255)
+    @Column(nullable = false)
+    private String name;
     
     @NotBlank
     @Size(max = 100)
-    @Email
-    @Column(unique = true)
-    private String email;
+    @Column(nullable = false, unique = true)
+    private String slug;
     
-    @NotBlank
-    @Size(max = 100)
-    private String password;
+    @Size(max = 255)
+    private String domain;
     
-    @Size(max = 100)
-    private String firstName;
-    
-    @Size(max = 100)
-    private String lastName;
-    
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private Set<Role> roles = new HashSet<>();
+    private TenantStatus status = TenantStatus.ACTIVE;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
     
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    @Column(name = "is_active")
-    @Builder.Default
-    private Boolean isActive = true;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id")
-    private Tenant tenant;
     
     @PrePersist
     protected void onCreate() {
@@ -79,5 +60,11 @@ public class User {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+    
+    public enum TenantStatus {
+        ACTIVE,
+        SUSPENDED,
+        INACTIVE
     }
 }
