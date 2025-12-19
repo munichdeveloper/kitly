@@ -1,4 +1,4 @@
-package com.kitly.saas.exception;
+package com.kitly.saas.common.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -74,6 +74,19 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+    
+    @ExceptionHandler(SeatLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleSeatLimitExceededException(SeatLimitExceededException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error("Forbidden")
+                .message(ex.getMessage())
+                .code("SEAT_LIMIT_EXCEEDED")
+                .details(new HashMap<>())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
     
     @ExceptionHandler(MethodArgumentNotValidException.class)

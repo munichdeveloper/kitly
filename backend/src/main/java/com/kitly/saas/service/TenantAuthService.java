@@ -3,7 +3,7 @@ package com.kitly.saas.service;
 import com.kitly.saas.dto.AuthResponse;
 import com.kitly.saas.entity.Membership;
 import com.kitly.saas.entity.User;
-import com.kitly.saas.exception.UnauthorizedException;
+import com.kitly.saas.common.exception.UnauthorizedException;
 import com.kitly.saas.repository.MembershipRepository;
 import com.kitly.saas.repository.UserRepository;
 import com.kitly.saas.security.JwtUtil;

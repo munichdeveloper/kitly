@@ -56,7 +56,7 @@ public class JwtUtil {
     public String generateToken(UserDetails userDetails, java.util.UUID tenantId) {
         Map<String, Object> claims = new HashMap<>();
         if (tenantId != null) {
-            claims.put("tenantId", tenantId.toString());
+            claims.put("tid", tenantId.toString());
             // Extract tenant-specific roles (those starting with TENANT_)
             java.util.List<String> tenantRoles = userDetails.getAuthorities().stream()
                     .map(auth -> auth.getAuthority())
@@ -69,7 +69,7 @@ public class JwtUtil {
     }
     
     public java.util.UUID extractTenantId(String token) {
-        String tenantIdStr = extractClaim(token, claims -> claims.get("tenantId", String.class));
+        String tenantIdStr = extractClaim(token, claims -> claims.get("tid", String.class));
         return tenantIdStr != null ? java.util.UUID.fromString(tenantIdStr) : null;
     }
     

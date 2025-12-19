@@ -1,7 +1,7 @@
 package com.kitly.saas.security.aspect;
 
-import com.kitly.saas.context.TenantContextHolder;
-import com.kitly.saas.exception.TenantAccessDeniedException;
+import com.kitly.saas.common.context.TenantContextHolder;
+import com.kitly.saas.common.exception.TenantAccessDeniedException;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
