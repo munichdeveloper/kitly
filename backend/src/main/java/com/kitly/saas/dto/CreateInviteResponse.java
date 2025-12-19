@@ -12,16 +12,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class InvitationResponse {
+public class CreateInviteResponse {
     
     private UUID id;
     private UUID tenantId;
-    private UUID teamId;
     private String email;
     private String role;
-    private String status;
-    private String invitedByUsername;
-    private LocalDateTime invitedAt;
+    private String token; // Only returned on creation
     private LocalDateTime expiresAt;
-    private LocalDateTime acceptedAt;
 }

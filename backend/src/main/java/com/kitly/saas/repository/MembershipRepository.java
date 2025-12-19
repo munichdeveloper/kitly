@@ -25,5 +25,7 @@ public interface MembershipRepository extends JpaRepository<Membership, UUID> {
     
     long countByTenantIdAndRole(UUID tenantId, MembershipRole role);
     
+    long countByTenantIdAndStatus(UUID tenantId, MembershipStatus status);
+    
     boolean existsByTenantIdAndUserId(UUID tenantId, UUID userId);
 }

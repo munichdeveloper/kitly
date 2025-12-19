@@ -40,7 +40,7 @@ public class SecurityConfig {
                 // CSRF protection is primarily needed for session-based authentication
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/health").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

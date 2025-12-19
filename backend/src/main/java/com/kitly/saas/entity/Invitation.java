@@ -50,8 +50,8 @@ public class Invitation {
     
     @NotBlank
     @Size(max = 255)
-    @Column(nullable = false, unique = true)
-    private String token;
+    @Column(nullable = false, unique = true, name = "token_hash")
+    private String tokenHash;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invited_by", nullable = false)
