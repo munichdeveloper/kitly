@@ -57,6 +57,13 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         if (tenantId != null) {
             claims.put("tenantId", tenantId.toString());
+            // Extract tenant-specific roles (those starting with TENANT_)
+            java.util.List<String> tenantRoles = userDetails.getAuthorities().stream()
+                    .map(auth -> auth.getAuthority())
+                    .filter(auth -> auth.startsWith("TENANT_"))
+                    .map(auth -> auth.substring(7)) // Remove "TENANT_" prefix to store just OWNER, ADMIN, MEMBER
+                    .collect(java.util.stream.Collectors.toList());
+            claims.put("roles", tenantRoles);
         }
         return createToken(claims, userDetails.getUsername());
     }
@@ -64,6 +71,17 @@ public class JwtUtil {
     public java.util.UUID extractTenantId(String token) {
         String tenantIdStr = extractClaim(token, claims -> claims.get("tenantId", String.class));
         return tenantIdStr != null ? java.util.UUID.fromString(tenantIdStr) : null;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public java.util.List<String> extractRoles(String token) {
+        return extractClaim(token, claims -> {
+            Object rolesObj = claims.get("roles");
+            if (rolesObj instanceof java.util.List) {
+                return (java.util.List<String>) rolesObj;
+            }
+            return new java.util.ArrayList<>();
+        });
     }
     
     private String createToken(Map<String, Object> claims, String subject) {

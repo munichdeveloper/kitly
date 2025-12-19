@@ -42,8 +42,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
             
             if (jwtUtil.validateToken(jwt, userDetails)) {
+                // Extract roles from JWT token (tenant-specific roles)
+                java.util.List<String> tenantRoles = jwtUtil.extractRoles(jwt);
+                
+                // Combine user's global authorities with tenant-specific roles from JWT
+                java.util.Set<org.springframework.security.core.GrantedAuthority> authorities = 
+                        new java.util.HashSet<>(userDetails.getAuthorities());
+                
+                // Add tenant-specific roles with ROLE_ prefix for Spring Security
+                for (String role : tenantRoles) {
+                    authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role));
+                }
+                
                 UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
             }

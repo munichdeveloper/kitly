@@ -18,5 +18,7 @@ public class ErrorResponse {
     private Integer status;
     private String error;
     private String message;
+    private String code;  // Error code for specific error types
+    private Map<String, Object> details;  // Additional error details
     private Map<String, String> validationErrors;
 }
