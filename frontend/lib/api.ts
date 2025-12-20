@@ -17,6 +17,9 @@ import {
   AcceptInviteRequest,
   EntitlementResponse,
   PlanDefinition,
+  CheckoutRequest,
+  CheckoutResponse,
+  SubscriptionResponse,
 } from './types';
 
 // Re-export types for convenience
@@ -39,6 +42,9 @@ export type {
   AcceptInviteRequest,
   EntitlementResponse,
   PlanDefinition,
+  CheckoutRequest,
+  CheckoutResponse,
+  SubscriptionResponse,
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
@@ -252,6 +258,24 @@ export class ApiClient {
       },
     });
     return this.handleResponse<Record<string, PlanDefinition>>(response);
+  }
+
+  // ========== Billing APIs ==========
+  static async createCheckoutSession(data: CheckoutRequest): Promise<CheckoutResponse> {
+    const response = await fetch(`${API_BASE_URL}/billing/checkout`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<CheckoutResponse>(response);
+  }
+
+  static async getSubscription(tenantId: string): Promise<SubscriptionResponse> {
+    const response = await fetch(`${API_BASE_URL}/billing/subscription/${tenantId}`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<SubscriptionResponse>(response);
   }
 
   // ========== Health Check ==========

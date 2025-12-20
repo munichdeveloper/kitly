@@ -151,6 +151,30 @@ export interface PlanDefinition {
   price?: number;
 }
 
+// Billing Types
+export interface CheckoutRequest {
+  tenantId: string;
+  plan: 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+}
+
+export interface CheckoutResponse {
+  url: string;
+}
+
+export interface SubscriptionResponse {
+  id: string;
+  tenantId: string;
+  plan: 'FREE' | 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+  status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING';
+  billingCycle?: 'MONTHLY' | 'YEARLY';
+  amount?: number;
+  currency?: string;
+  startsAt: string;
+  endsAt?: string;
+  trialEndsAt?: string;
+  cancelledAt?: string;
+}
+
 // UI State Types
 export interface Toast {
   id: string;

@@ -7,7 +7,8 @@ export function middleware(request: NextRequest) {
   // Check if trying to access protected routes
   const isProtectedRoute = 
     request.nextUrl.pathname.startsWith('/workspaces') ||
-    request.nextUrl.pathname.startsWith('/dashboard');
+    request.nextUrl.pathname.startsWith('/dashboard') ||
+    request.nextUrl.pathname.startsWith('/subscriptions');
 
   // If no token and trying to access protected route, redirect to login
   if (isProtectedRoute && !token) {
@@ -20,5 +21,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/workspaces/:path*', '/dashboard/:path*'],
+  matcher: ['/workspaces/:path*', '/dashboard/:path*', '/subscriptions/:path*'],
 };

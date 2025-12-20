@@ -8,6 +8,7 @@ import com.kitly.saas.repository.WebhookInboxRepository;
 import com.kitly.saas.common.outbox.OutboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,19 @@ public class WebhookProcessor {
             "customer.subscription.updated",
             "customer.subscription.deleted",
             "invoice.payment_succeeded",
-            "invoice.payment_failed"
+            "invoice.payment_failed",
+            "checkout.session.completed",
+            "invoice.paid",
+            "invoice.created",
+            "payment_intent.succeeded",
+            "payment_intent.created",
+            "charge.succeeded",
+            "payment_method.attached",
+            "customer.created",
+            "customer.updated",
+            "invoice.finalized",
+            "invoice.updated",
+            "invoice_payment.paid"
     );
     
     private final WebhookInboxRepository webhookInboxRepository;
@@ -37,17 +50,27 @@ public class WebhookProcessor {
     private final EntitlementService entitlementService;
     private final OutboxService outboxService;
     
+    private final String starterPriceId;
+    private final String businessPriceId;
+    private final String enterprisePriceId;
+
     public WebhookProcessor(
             WebhookInboxRepository webhookInboxRepository,
             SubscriptionRepository subscriptionRepository,
             TenantRepository tenantRepository,
             EntitlementService entitlementService,
-            OutboxService outboxService) {
+            OutboxService outboxService,
+            @Value("${stripe.price.starter}") String starterPriceId,
+            @Value("${stripe.price.business}") String businessPriceId,
+            @Value("${stripe.price.enterprise}") String enterprisePriceId) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
         this.entitlementService = entitlementService;
         this.outboxService = outboxService;
+        this.starterPriceId = starterPriceId;
+        this.businessPriceId = businessPriceId;
+        this.enterprisePriceId = enterprisePriceId;
     }
     
     /**
@@ -99,6 +122,23 @@ public class WebhookProcessor {
                 case "invoice.payment_failed":
                     handlePaymentFailed(webhook);
                     break;
+                case "checkout.session.completed":
+                    handleCheckoutSessionCompleted(webhook);
+                    break;
+                case "invoice.paid":
+                case "invoice.created":
+                case "payment_intent.succeeded":
+                case "payment_intent.created":
+                case "charge.succeeded":
+                case "payment_method.attached":
+                case "customer.created":
+                case "customer.updated":
+                case "invoice.finalized":
+                case "invoice.updated":
+                case "invoice_payment.paid":
+                    // These events are part of the flow but we rely on other events for processing
+                    logger.debug("Received event {}, no action required", eventType);
+                    break;
             }
             
             webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSED);
@@ -123,8 +163,11 @@ public class WebhookProcessor {
             throw new IllegalArgumentException("Missing data in webhook payload");
         }
         
-        Map<String, Object> subscriptionData = (Map<String, Object>) data;
-        
+        Map<String, Object> subscriptionData = (Map<String, Object>) data.get("object");
+        if (subscriptionData == null) {
+            throw new IllegalArgumentException("Missing object in webhook data");
+        }
+
         // Extract subscription details
         String stripeSubscriptionId = (String) subscriptionData.get("id");
         String status = (String) subscriptionData.get("status");
@@ -164,10 +207,25 @@ public class WebhookProcessor {
                 Map<String, Object> firstItem = dataItems.get(0);
                 Map<String, Object> price = (Map<String, Object>) firstItem.get("price");
                 if (price != null) {
-                    Map<String, Object> priceMetadata = (Map<String, Object>) price.get("metadata");
-                    if (priceMetadata != null && priceMetadata.containsKey("plan")) {
-                        String planName = (String) priceMetadata.get("plan");
-                        subscription.setPlan(mapPlanName(planName));
+                    // Try to match by Price ID first
+                    String priceId = (String) price.get("id");
+                    if (priceId != null) {
+                        if (priceId.equals(starterPriceId)) {
+                            subscription.setPlan(Subscription.SubscriptionPlan.STARTER);
+                        } else if (priceId.equals(businessPriceId)) {
+                            subscription.setPlan(Subscription.SubscriptionPlan.BUSINESS);
+                        } else if (priceId.equals(enterprisePriceId)) {
+                            subscription.setPlan(Subscription.SubscriptionPlan.ENTERPRISE);
+                        }
+                    }
+
+                    // Fallback to metadata if plan not set by ID
+                    if (subscription.getPlan() == Subscription.SubscriptionPlan.FREE) {
+                        Map<String, Object> priceMetadata = (Map<String, Object>) price.get("metadata");
+                        if (priceMetadata != null && priceMetadata.containsKey("plan")) {
+                            String planName = (String) priceMetadata.get("plan");
+                            subscription.setPlan(mapPlanName(planName));
+                        }
                     }
                 }
             }
@@ -194,6 +252,29 @@ public class WebhookProcessor {
     }
     
     @SuppressWarnings("unchecked")
+    private void handleCheckoutSessionCompleted(WebhookInbox webhook) {
+        Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
+        if (data == null) {
+            return;
+        }
+
+        Map<String, Object> sessionData = (Map<String, Object>) data.get("object");
+        if (sessionData == null) {
+            return;
+        }
+
+        // When a checkout session completes, we want to ensure the subscription is active
+        // The subscription ID is available in the session object
+        String subscriptionId = (String) sessionData.get("subscription");
+        if (subscriptionId != null) {
+            logger.info("Checkout session completed for subscription: {}", subscriptionId);
+            // We could fetch the subscription from Stripe here to be sure,
+            // but usually customer.subscription.created/updated events follow this.
+            // For now, we'll rely on those events, but logging this helps debugging.
+        }
+    }
+
+    @SuppressWarnings("unchecked")
     private void handlePaymentSucceeded(WebhookInbox webhook) {
         Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
         if (data == null) {
@@ -212,8 +293,13 @@ public class WebhookProcessor {
             return;
         }
         
+        Map<String, Object> invoiceData = (Map<String, Object>) data.get("object");
+        if (invoiceData == null) {
+            return;
+        }
+
         // Extract subscription ID from invoice
-        String subscriptionId = (String) data.get("subscription");
+        String subscriptionId = (String) invoiceData.get("subscription");
         if (subscriptionId != null) {
             logger.warn("Payment failed for subscription: {}", subscriptionId);
             // In a real system, you'd update the subscription status to PAST_DUE
@@ -233,7 +319,7 @@ public class WebhookProcessor {
     private Subscription.SubscriptionPlan mapPlanName(String planName) {
         return switch (planName.toLowerCase()) {
             case "starter" -> Subscription.SubscriptionPlan.STARTER;
-            case "professional", "pro" -> Subscription.SubscriptionPlan.BUSINESS;
+            case "business" -> Subscription.SubscriptionPlan.BUSINESS;
             case "enterprise" -> Subscription.SubscriptionPlan.ENTERPRISE;
             default -> Subscription.SubscriptionPlan.FREE;
         };

@@ -1,5 +1,6 @@
 package com.kitly.saas.billing.webhook;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kitly.saas.entity.WebhookInbox;
 import com.kitly.saas.repository.WebhookInboxRepository;
 import com.stripe.exception.SignatureVerificationException;
@@ -22,27 +23,30 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/billing/webhooks")
 public class StripeWebhookController {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(StripeWebhookController.class);
     private static final String PROVIDER = "stripe";
-    
+
     private final WebhookInboxRepository webhookInboxRepository;
     private final String webhookSecret;
-    
+    private final ObjectMapper objectMapper;
+
     public StripeWebhookController(
             WebhookInboxRepository webhookInboxRepository,
-            @Value("${stripe.webhook-secret}") String webhookSecret) {
+            @Value("${stripe.webhook-secret}") String webhookSecret,
+            ObjectMapper objectMapper) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.webhookSecret = webhookSecret;
+        this.objectMapper = objectMapper;
     }
-    
+
     @PostMapping("/stripe")
     public ResponseEntity<Map<String, Object>> handleStripeWebhook(
             @RequestBody String payload,
             @RequestHeader("Stripe-Signature") String signatureHeader) {
-        
+
         logger.info("Received Stripe webhook");
-        
+
         // Verify signature
         Event event;
         try {
@@ -58,11 +62,11 @@ public class StripeWebhookController {
                     "error", "Invalid payload"
             ));
         }
-        
+
         // Check for duplicate (idempotency)
         Optional<WebhookInbox> existing = webhookInboxRepository
                 .findByProviderAndEventId(PROVIDER, event.getId());
-        
+
         if (existing.isPresent()) {
             logger.info("Webhook already received: {}", event.getId());
             return ResponseEntity.ok(Map.of(
@@ -70,15 +74,13 @@ public class StripeWebhookController {
                     "eventId", event.getId()
             ));
         }
-        
+
         // Store webhook for async processing
         try {
-            Map<String, Object> payloadMap = new HashMap<>();
-            payloadMap.put("type", event.getType());
-            payloadMap.put("data", event.getData().getObject());
-            payloadMap.put("created", event.getCreated());
-            payloadMap.put("livemode", event.getLivemode());
-            
+            // Parse payload to Map to avoid serialization issues with Stripe objects
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payloadMap = objectMapper.readValue(payload, Map.class);
+
             WebhookInbox webhookInbox = WebhookInbox.builder()
                     .provider(PROVIDER)
                     .eventId(event.getId())
@@ -86,21 +88,21 @@ public class StripeWebhookController {
                     .payload(payloadMap)
                     .status(WebhookInbox.WebhookStatus.PENDING)
                     .build();
-            
+
             webhookInboxRepository.save(webhookInbox);
-            
-            logger.info("Stored webhook for processing: type={}, id={}", 
+
+            logger.info("Stored webhook for processing: type={}, id={}",
                     event.getType(), event.getId());
-            
+
             return ResponseEntity.ok(Map.of(
                     "status", "received",
                     "eventId", event.getId()
             ));
-            
+
         } catch (Exception e) {
             logger.error("Error storing webhook", e);
             return ResponseEntity.internalServerError().body(Map.of(
-                    "error", "Failed to store webhook"
+                    "error", "Error storing webhook"
             ));
         }
     }
