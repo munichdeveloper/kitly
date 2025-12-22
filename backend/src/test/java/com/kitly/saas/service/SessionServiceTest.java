@@ -105,7 +105,7 @@ class SessionServiceTest {
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(testTenant));
         when(entitlementVersionRepository.findByTenant(testTenant))
                 .thenReturn(Optional.of(testEntitlementVersion));
-        when(jwtUtil.generateTenantToken(userId, tenantId, List.of("MEMBER"), 5L))
+        when(jwtUtil.generateTenantToken("testuser", tenantId, List.of("MEMBER"), 5L))
                 .thenReturn(token);
         
         // Act
@@ -121,7 +121,7 @@ class SessionServiceTest {
         assertThat(response.getEntitlementVersion()).isEqualTo(5L);
         assertThat(response.getExpiresIn()).isEqualTo(900000L);
         
-        verify(jwtUtil).generateTenantToken(userId, tenantId, List.of("MEMBER"), 5L);
+        verify(jwtUtil).generateTenantToken("testuser", tenantId, List.of("MEMBER"), 5L);
     }
     
     @Test
@@ -199,7 +199,7 @@ class SessionServiceTest {
         when(tenantRepository.findById(tenantId)).thenReturn(Optional.of(testTenant));
         when(entitlementVersionRepository.findByTenant(testTenant))
                 .thenReturn(Optional.of(testEntitlementVersion));
-        when(jwtUtil.generateTenantToken(userId, tenantId, roles, 5L))
+        when(jwtUtil.generateTenantToken("testuser", tenantId, roles, 5L))
                 .thenReturn(newToken);
         
         // Act

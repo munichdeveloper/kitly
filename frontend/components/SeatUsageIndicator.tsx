@@ -4,9 +4,10 @@ interface SeatUsageIndicatorProps {
   used: number;
   limit: number;
   showLabel?: boolean;
+  className?: string;
 }
 
-export default function SeatUsageIndicator({ used, limit, showLabel = true }: SeatUsageIndicatorProps) {
+export default function SeatUsageIndicator({ used, limit, showLabel = true, className = '' }: SeatUsageIndicatorProps) {
   const percentage = Math.min((used / limit) * 100, 100);
   const isNearLimit = percentage >= 80;
   const isAtLimit = used >= limit;
@@ -24,7 +25,7 @@ export default function SeatUsageIndicator({ used, limit, showLabel = true }: Se
   };
 
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${className}`}>
       {showLabel && (
         <div className="flex justify-between text-sm">
           <span className="text-gray-700">Seat Usage</span>

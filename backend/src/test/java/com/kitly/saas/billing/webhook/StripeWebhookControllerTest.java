@@ -1,11 +1,11 @@
 package com.kitly.saas.billing.webhook;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kitly.saas.entity.WebhookInbox;
 import com.kitly.saas.repository.WebhookInboxRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -30,7 +30,7 @@ class StripeWebhookControllerTest {
     
     @BeforeEach
     void setUp() {
-        controller = new StripeWebhookController(webhookInboxRepository, TEST_SECRET);
+        controller = new StripeWebhookController(webhookInboxRepository, TEST_SECRET, new ObjectMapper());
     }
     
     @Test

@@ -20,6 +20,7 @@ import {
   CheckoutRequest,
   CheckoutResponse,
   SubscriptionResponse,
+  Invoice,
 } from './types';
 
 // Re-export types for convenience
@@ -45,6 +46,7 @@ export type {
   CheckoutRequest,
   CheckoutResponse,
   SubscriptionResponse,
+  Invoice,
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
@@ -276,6 +278,14 @@ export class ApiClient {
       headers: this.getAuthHeader(),
     });
     return this.handleResponse<SubscriptionResponse>(response);
+  }
+
+  static async getInvoices(tenantId: string): Promise<Invoice[]> {
+    const response = await fetch(`${API_BASE_URL}/billing/invoices/${tenantId}`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<Invoice[]>(response);
   }
 
   // ========== Health Check ==========

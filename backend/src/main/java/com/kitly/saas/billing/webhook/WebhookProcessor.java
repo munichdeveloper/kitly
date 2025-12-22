@@ -2,6 +2,7 @@ package com.kitly.saas.billing.webhook;
 
 import com.kitly.saas.entity.*;
 import com.kitly.saas.entitlement.EntitlementService;
+import com.kitly.saas.repository.InvoiceRepository;
 import com.kitly.saas.repository.SubscriptionRepository;
 import com.kitly.saas.repository.TenantRepository;
 import com.kitly.saas.repository.WebhookInboxRepository;
@@ -47,6 +48,7 @@ public class WebhookProcessor {
     private final WebhookInboxRepository webhookInboxRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;
+    private final InvoiceRepository invoiceRepository;
     private final EntitlementService entitlementService;
     private final OutboxService outboxService;
     
@@ -58,6 +60,7 @@ public class WebhookProcessor {
             WebhookInboxRepository webhookInboxRepository,
             SubscriptionRepository subscriptionRepository,
             TenantRepository tenantRepository,
+            InvoiceRepository invoiceRepository,
             EntitlementService entitlementService,
             OutboxService outboxService,
             @Value("${stripe.price.starter}") String starterPriceId,
@@ -66,6 +69,7 @@ public class WebhookProcessor {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
+        this.invoiceRepository = invoiceRepository;
         this.entitlementService = entitlementService;
         this.outboxService = outboxService;
         this.starterPriceId = starterPriceId;
@@ -281,9 +285,43 @@ public class WebhookProcessor {
             return;
         }
         
-        logger.info("Payment succeeded for invoice");
-        // Payment succeeded - subscription should remain active
-        // This is already handled by subscription.updated events
+        Map<String, Object> invoiceData = (Map<String, Object>) data.get("object");
+        if (invoiceData == null) {
+            return;
+        }
+
+        String stripeInvoiceId = (String) invoiceData.get("id");
+        if (invoiceRepository.existsByStripeInvoiceId(stripeInvoiceId)) {
+            logger.info("Invoice already exists: {}", stripeInvoiceId);
+            return;
+        }
+
+        String stripeSubscriptionId = (String) invoiceData.get("subscription");
+        if (stripeSubscriptionId == null) {
+            logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
+            return;
+        }
+
+        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+        if (subscriptionOpt.isEmpty()) {
+            logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
+            return;
+        }
+
+        Subscription subscription = subscriptionOpt.get();
+
+        Invoice invoice = Invoice.builder()
+                .tenantId(subscription.getTenant().getId())
+                .stripeInvoiceId(stripeInvoiceId)
+                .amountPaid(((Number) invoiceData.get("amount_paid")).longValue())
+                .currency((String) invoiceData.get("currency"))
+                .status((String) invoiceData.get("status"))
+                .invoicePdf((String) invoiceData.get("invoice_pdf"))
+                .hostedInvoiceUrl((String) invoiceData.get("hosted_invoice_url"))
+                .build();
+
+        invoiceRepository.save(invoice);
+        logger.info("Saved invoice {} for tenant {}", stripeInvoiceId, subscription.getTenant().getId());
     }
     
     @SuppressWarnings("unchecked")

@@ -67,7 +67,10 @@ public class Subscription {
     
     @Column(name = "max_seats")
     private Integer maxSeats;
-    
+
+    @Column(name = "stripe_subscription_id")
+    private String stripeSubscriptionId;
+
     @Version
     @Column(name = "entitlement_version")
     private Long entitlementVersion;

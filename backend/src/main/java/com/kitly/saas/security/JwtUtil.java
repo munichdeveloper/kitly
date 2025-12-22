@@ -124,13 +124,13 @@ public class JwtUtil {
      * Generate a tenant-scoped session token.
      * This token is separate from the IdP token and contains tenant-specific context.
      *
-     * @param userId User ID (used as subject)
+     * @param username Username (used as subject)
      * @param tenantId Tenant ID for the session
      * @param roles List of tenant-specific roles (e.g., OWNER, ADMIN, MEMBER)
      * @param entitlementVersion Current entitlement version for the tenant
      * @return JWT token with tenant context
      */
-    public String generateTenantToken(java.util.UUID userId, java.util.UUID tenantId, 
+    public String generateTenantToken(String username, java.util.UUID tenantId,
                                      java.util.List<String> roles, Long entitlementVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("tid", tenantId.toString());
@@ -141,7 +141,7 @@ public class JwtUtil {
         
         return Jwts.builder()
                 .claims(claims)
-                .subject(userId.toString())
+                .subject(username)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + sessionExpiration))
                 .signWith(getSessionSigningKey())

@@ -1,18 +1,39 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import TenantSwitcher from '@/components/TenantSwitcher';
 import { useAuth } from '@/lib/auth-context';
+import { useTenant } from '@/lib/tenant-context';
 import Button from '@/components/Button';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const pathname = usePathname();
   const { logout, user } = useAuth();
+  const { currentSession, switchTenant, loading: tenantLoading } = useTenant();
   const tenantId = params.tenantId as string;
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  useEffect(() => {
+    const ensureTenantSession = async () => {
+      if (!tenantLoading && tenantId && currentSession?.tenantId !== tenantId) {
+        setIsSwitching(true);
+        try {
+          await switchTenant(tenantId);
+        } catch (error) {
+          console.error('Failed to switch tenant session:', error);
+        } finally {
+          setIsSwitching(false);
+        }
+      }
+    };
+
+    ensureTenantSession();
+  }, [tenantId, currentSession, tenantLoading, switchTenant]);
 
   const navigation = [
     { name: 'Dashboard', href: `/workspaces/${tenantId}/dashboard`, icon: '📊' },
@@ -21,6 +42,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   ];
 
   const isActive = (href: string) => pathname === href;
+
+  if (isSwitching || (tenantLoading && !currentSession)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <ProtectedRoute>

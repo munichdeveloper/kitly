@@ -164,15 +164,28 @@ export interface CheckoutResponse {
 export interface SubscriptionResponse {
   id: string;
   tenantId: string;
-  plan: 'FREE' | 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
-  status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING';
-  billingCycle?: 'MONTHLY' | 'YEARLY';
-  amount?: number;
-  currency?: string;
+  plan: string;
+  status: string;
+  billingCycle: string;
+  amount: number;
+  currency: string;
   startsAt: string;
   endsAt?: string;
   trialEndsAt?: string;
   cancelledAt?: string;
+  maxSeats: number;
+}
+
+export interface Invoice {
+  id: string;
+  tenantId: string;
+  stripeInvoiceId: string;
+  amountPaid: number;
+  currency: string;
+  status: string;
+  invoicePdf: string;
+  hostedInvoiceUrl: string;
+  createdAt: string;
 }
 
 // UI State Types

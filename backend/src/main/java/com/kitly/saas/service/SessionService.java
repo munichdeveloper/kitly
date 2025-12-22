@@ -86,8 +86,8 @@ public class SessionService {
         List<String> roles = List.of(membership.getRole().name());
         
         // Generate tenant-scoped token
-        String token = jwtUtil.generateTenantToken(user.getId(), tenantId, roles, entitlementVersion);
-        
+        String token = jwtUtil.generateTenantToken(user.getUsername(), tenantId, roles, entitlementVersion);
+
         return SessionResponse.builder()
                 .token(token)
                 .type("Bearer")
@@ -135,8 +135,8 @@ public class SessionService {
         Long latestEntitlementVersion = getEntitlementVersion(tenant);
         
         // Generate new token with updated entitlement version
-        String newToken = jwtUtil.generateTenantToken(user.getId(), tenantId, roles, latestEntitlementVersion);
-        
+        String newToken = jwtUtil.generateTenantToken(user.getUsername(), tenantId, roles, latestEntitlementVersion);
+
         return RefreshTokenResponse.builder()
                 .token(newToken)
                 .type("Bearer")
