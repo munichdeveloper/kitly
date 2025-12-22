@@ -1,4 +1,4 @@
-'use client';
+U'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,7 @@ import Input from '@/components/Input';
 import Card from '@/components/Card';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,12 +22,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      await login(email, password);
       console.log('Redirecting to dashboard...');
       router.push('/dashboard');
     } catch (err: any) {
       console.error('Login failed:', err);
-      setError(err.message || 'Invalid username or password');
+      setError(err.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -43,12 +43,12 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <Input
-            label="Username"
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="Enter your username"
+            placeholder="Enter your email"
           />
 
           <Input

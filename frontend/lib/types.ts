@@ -19,7 +19,7 @@ export interface AuthResponse {
 }
 
 export interface LoginData {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -135,11 +135,16 @@ export interface AcceptInviteRequest {
 // Entitlement Types
 export interface EntitlementResponse {
   tenantId: string;
-  planName: string;
-  version: number;
-  features: Record<string, boolean>;
-  limits: Record<string, number>;
-  computedAt: string;
+  planCode: string;
+  status: string;
+  seatsQuantity: number;
+  activeSeats: number;
+  entitlementVersion: number;
+  items: Array<{
+    key: string;
+    value: string;
+    source: string;
+  }>;
 }
 
 export interface PlanDefinition {

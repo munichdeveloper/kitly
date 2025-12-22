@@ -104,7 +104,7 @@ export default function MembersPage() {
   }
 
   const activeMembers = members.filter((m) => m.status === 'ACTIVE').length;
-  const seatLimit = entitlements?.limits?.maxSeats || 10;
+  const seatLimit = entitlements?.seatsQuantity || 10;
   const canInvite = activeMembers < seatLimit;
 
   return (

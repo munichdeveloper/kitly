@@ -6,7 +6,7 @@ import { ApiClient, AuthResponse, UserResponse } from './api';
 interface AuthContextType {
   user: UserResponse | null;
   token: string | null;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   signup: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -48,11 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       console.log('Logging in...');
-      const response: AuthResponse = await ApiClient.login({ username, password });
+      const response: AuthResponse = await ApiClient.login({ email, password });
       console.log('Login successful, token:', response.token);
       localStorage.setItem('token', response.token);
       // Set cookie for middleware

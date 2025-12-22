@@ -68,7 +68,7 @@ export default function DashboardPage() {
   }
 
   const activeMembers = members.filter((m) => m.status === 'ACTIVE').length;
-  const seatLimit = entitlements.limits?.maxSeats || 10;
+  const seatLimit = entitlements.seatsQuantity || 10;
 
   return (
     <div className="space-y-6">
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-gray-600">Current Plan</p>
               <p className="text-2xl font-bold text-gray-900 mt-1 capitalize">
-                {entitlements.planName}
+                {entitlements.planCode}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">

@@ -70,9 +70,9 @@ export default function BillingPage() {
     return <ErrorMessage message="Billing information not found" />;
   }
 
-  const currentPlan = plans[entitlements.planName];
+  const currentPlan = plans[entitlements.planCode];
   const activeMembers = members.filter((m) => m.status === 'ACTIVE').length;
-  const seatLimit = entitlements.limits?.maxSeats || 10;
+  const seatLimit = entitlements.seatsQuantity || 10;
 
   return (
     <div className="space-y-6">
@@ -87,7 +87,7 @@ export default function BillingPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 capitalize">
-              {currentPlan?.displayName || entitlements.planName}
+              {currentPlan?.displayName || entitlements.planCode}
             </h2>
             <p className="text-gray-600 mt-1">{currentPlan?.description || 'Your current plan'}</p>
           </div>
