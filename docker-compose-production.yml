@@ -9,7 +9,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - JAVA_OPTS=-Xmx512m -Xms256m
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://aws-1-eu-central-1.pooler.supabase.com:6543/postgres?user=postgres.appsfjcoavulzbxxpcpo
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://aws-1-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0&preferQueryMode=simple&user=postgres.appsfjcoavulzbxxpcpo
       - SPRING_DATASOURCE_USERNAME=postgres.appsfjcoavulzbxxpcpo
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-dummyPassword}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
