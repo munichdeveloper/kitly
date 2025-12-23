@@ -1,9 +1,11 @@
 package com.kitly.saas.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -43,25 +45,24 @@ public class JwtUtil {
     }
     
     private Claims extractAllClaims(String token) {
-        // Try to parse with session key first, then fall back to regular key
+        // Try to parse with signing key first (main secret)
         try {
             return Jwts.parser()
-                    .verifyWith(getSessionSigningKey())
+                    .verifyWith(getSigningKey())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
-            // If session key fails, try regular key
-            // This allows supporting both session tokens and legacy IdP tokens
+        } catch (JwtException | IllegalArgumentException e) {
+            // If signing key fails, try session key (legacy support)
             try {
                 return Jwts.parser()
-                        .verifyWith(getSigningKey())
+                        .verifyWith(getSessionSigningKey())
                         .build()
                         .parseSignedClaims(token)
                         .getPayload();
-            } catch (io.jsonwebtoken.JwtException ex) {
+            } catch (JwtException ex) {
                 // Log and rethrow for security monitoring
-                throw new io.jsonwebtoken.JwtException("Failed to parse JWT token with both session and regular keys", ex);
+                throw new JwtException("Failed to parse JWT token with both keys", ex);
             }
         }
     }
@@ -81,7 +82,7 @@ public class JwtUtil {
             claims.put("tid", tenantId.toString());
             // Extract tenant-specific roles (those starting with TENANT_)
             java.util.List<String> tenantRoles = userDetails.getAuthorities().stream()
-                    .map(auth -> auth.getAuthority())
+                    .map(GrantedAuthority::getAuthority)
                     .filter(auth -> auth.startsWith("TENANT_"))
                     .map(auth -> auth.substring(7)) // Remove "TENANT_" prefix to store just OWNER, ADMIN, MEMBER
                     .collect(java.util.stream.Collectors.toList());
@@ -116,7 +117,7 @@ public class JwtUtil {
                 .subject(subject)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
+                .signWith(getSigningKey(), Jwts.SIG.HS512)
                 .compact();
     }
     
@@ -144,7 +145,7 @@ public class JwtUtil {
                 .subject(username)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + sessionExpiration))
-                .signWith(getSessionSigningKey())
+                .signWith(getSigningKey(), Jwts.SIG.HS512) // Use main secret for compatibility
                 .compact();
     }
     
@@ -158,6 +159,7 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
     
+    // Session key no longer used for signing to ensure compatibility with external apps
     private SecretKey getSessionSigningKey() {
         byte[] keyBytes = sessionSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);

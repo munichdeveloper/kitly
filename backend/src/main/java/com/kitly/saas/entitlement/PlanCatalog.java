@@ -28,6 +28,7 @@ public class PlanCatalog {
                 .name("Business")
                 .entitlements(Map.of(
                     "features.ai_assistant", "true",
+                    "app.nim.access", "true",
                     "limits.projects", "100",
                     "limits.api_calls_per_month", "10000"
                 ))
@@ -39,6 +40,7 @@ public class PlanCatalog {
                 .name("Enterprise")
                 .entitlements(Map.of(
                     "features.ai_assistant", "true",
+                    "app.nim.access", "true",
                     "limits.projects", "unlimited",
                     "limits.api_calls_per_month", "unlimited"
                 ))

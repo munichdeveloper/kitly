@@ -86,7 +86,7 @@ class EntitlementServiceTest {
         // Then
         assertNotNull(response);
         assertEquals(testTenantId, response.getTenantId());
-        assertEquals("pro", response.getPlanCode());
+        assertEquals("business", response.getPlanCode());
         assertEquals("ACTIVE", response.getStatus());
         assertEquals(50, response.getSeatsQuantity());
         assertEquals(7L, response.getActiveSeats());
@@ -95,12 +95,14 @@ class EntitlementServiceTest {
         // Check plan entitlements
         List<EntitlementResponse.EntitlementItem> items = response.getItems();
         assertNotNull(items);
-        assertEquals(3, items.size());
-        
+        assertEquals(4, items.size());
+
         // Verify specific entitlements
         assertTrue(items.stream().anyMatch(item -> 
                 "features.ai_assistant".equals(item.getKey()) && "true".equals(item.getValue())));
-        assertTrue(items.stream().anyMatch(item -> 
+        assertTrue(items.stream().anyMatch(item ->
+                "app.nim.access".equals(item.getKey()) && "true".equals(item.getValue())));
+        assertTrue(items.stream().anyMatch(item ->
                 "limits.projects".equals(item.getKey()) && "100".equals(item.getValue())));
         assertTrue(items.stream().anyMatch(item -> 
                 "limits.api_calls_per_month".equals(item.getKey()) && "10000".equals(item.getValue())));
