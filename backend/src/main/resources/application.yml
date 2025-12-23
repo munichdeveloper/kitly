@@ -6,7 +6,6 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/kitlydb}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-    driverClassName: org.postgresql.Driver
 
   flyway:
     enabled: true
@@ -14,6 +13,9 @@ spring:
     locations: classpath:db/migration
     clean-disabled: false
     clean-on-validation-error: false
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
