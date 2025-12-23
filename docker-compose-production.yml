@@ -13,7 +13,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres.appsfjcoavulzbxxpcpo
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-dummyPassword}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - VIRTUAL_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
