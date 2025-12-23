@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - SPRING_DATASOURCE_URL=postgresql://postgres.appsfjcoavulzbxxpcpo:GmeL45ZF1HqHV7Kr@aws-1-eu-central-1.pooler.supabase.com:6543/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres.appsfjcoavulzbxxpcpo
+      - SPRING_DATASOURCE_PASSWORD=GmeL45ZF1HqHV7Kr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
