@@ -19,6 +19,11 @@ services:
       - VIRTUAL_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
+      - STRIPE_API_KEY=${STRIPE_API_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER}
+      - STRIPE_PRICE_BUSINESS=${STRIPE_PRICE_BUSINESS}
+      - STRIPE_PRICE_ENTERPRISE=${STRIPE_PRICE_ENTERPRISE}
     networks:
       - auto-proxy
     healthcheck:
