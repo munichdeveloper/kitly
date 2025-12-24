@@ -1,6 +1,7 @@
 package com.kitly.saas.billing.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kitly.saas.config.StripeConfig;
 import com.kitly.saas.entity.WebhookInbox;
 import com.kitly.saas.repository.WebhookInboxRepository;
 import com.stripe.exception.SignatureVerificationException;
@@ -8,11 +9,9 @@ import com.stripe.model.Event;
 import com.stripe.net.Webhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,10 +32,10 @@ public class StripeWebhookController {
 
     public StripeWebhookController(
             WebhookInboxRepository webhookInboxRepository,
-            @Value("${stripe.webhook-secret}") String webhookSecret,
+            StripeConfig stripeConfig,
             ObjectMapper objectMapper) {
         this.webhookInboxRepository = webhookInboxRepository;
-        this.webhookSecret = webhookSecret;
+        this.webhookSecret = stripeConfig.getWebhookSecret();
         this.objectMapper = objectMapper;
     }
 

@@ -1,5 +1,6 @@
 package com.kitly.saas.service;
 
+import com.kitly.saas.config.StripeConfig;
 import com.kitly.saas.entity.Subscription;
 import com.kitly.saas.entity.Tenant;
 import com.kitly.saas.entity.User;
@@ -18,22 +19,15 @@ public class StripeService {
 
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
-
-    @Value("${stripe.price.starter}")
-    private String starterPriceId;
-
-    @Value("${stripe.price.business}")
-    private String businessPriceId;
-
-    @Value("${stripe.price.enterprise}")
-    private String enterprisePriceId;
+    private final StripeConfig stripeConfig;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    public StripeService(TenantRepository tenantRepository, UserRepository userRepository) {
+    public StripeService(TenantRepository tenantRepository, UserRepository userRepository, StripeConfig stripeConfig) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
+        this.stripeConfig = stripeConfig;
     }
 
     public String createCheckoutSession(UUID tenantId, String username, Subscription.SubscriptionPlan plan) throws StripeException {
@@ -81,9 +75,9 @@ public class StripeService {
 
     private String getPriceIdForPlan(Subscription.SubscriptionPlan plan) {
         return switch (plan) {
-            case STARTER -> starterPriceId;
-            case BUSINESS -> businessPriceId;
-            case ENTERPRISE -> enterprisePriceId;
+            case STARTER -> stripeConfig.getStarterPriceId();
+            case BUSINESS -> stripeConfig.getBusinessPriceId();
+            case ENTERPRISE -> stripeConfig.getEnterprisePriceId();
             default -> throw new IllegalArgumentException("Invalid plan for checkout: " + plan);
         };
     }

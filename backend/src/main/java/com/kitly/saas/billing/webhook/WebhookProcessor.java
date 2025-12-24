@@ -1,5 +1,6 @@
 package com.kitly.saas.billing.webhook;
 
+import com.kitly.saas.config.StripeConfig;
 import com.kitly.saas.entity.*;
 import com.kitly.saas.entitlement.EntitlementService;
 import com.kitly.saas.repository.InvoiceRepository;
@@ -9,7 +10,6 @@ import com.kitly.saas.repository.WebhookInboxRepository;
 import com.kitly.saas.common.outbox.OutboxService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,10 +51,7 @@ public class WebhookProcessor {
     private final InvoiceRepository invoiceRepository;
     private final EntitlementService entitlementService;
     private final OutboxService outboxService;
-    
-    private final String starterPriceId;
-    private final String businessPriceId;
-    private final String enterprisePriceId;
+    private final StripeConfig stripeConfig;
 
     public WebhookProcessor(
             WebhookInboxRepository webhookInboxRepository,
@@ -63,18 +60,14 @@ public class WebhookProcessor {
             InvoiceRepository invoiceRepository,
             EntitlementService entitlementService,
             OutboxService outboxService,
-            @Value("${stripe.price.starter}") String starterPriceId,
-            @Value("${stripe.price.business}") String businessPriceId,
-            @Value("${stripe.price.enterprise}") String enterprisePriceId) {
+            StripeConfig stripeConfig) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
         this.invoiceRepository = invoiceRepository;
         this.entitlementService = entitlementService;
         this.outboxService = outboxService;
-        this.starterPriceId = starterPriceId;
-        this.businessPriceId = businessPriceId;
-        this.enterprisePriceId = enterprisePriceId;
+        this.stripeConfig = stripeConfig;
     }
     
     /**
@@ -214,11 +207,11 @@ public class WebhookProcessor {
                     // Try to match by Price ID first
                     String priceId = (String) price.get("id");
                     if (priceId != null) {
-                        if (priceId.equals(starterPriceId)) {
+                        if (priceId.equals(stripeConfig.getStarterPriceId())) {
                             subscription.setPlan(Subscription.SubscriptionPlan.STARTER);
-                        } else if (priceId.equals(businessPriceId)) {
+                        } else if (priceId.equals(stripeConfig.getBusinessPriceId())) {
                             subscription.setPlan(Subscription.SubscriptionPlan.BUSINESS);
-                        } else if (priceId.equals(enterprisePriceId)) {
+                        } else if (priceId.equals(stripeConfig.getEnterprisePriceId())) {
                             subscription.setPlan(Subscription.SubscriptionPlan.ENTERPRISE);
                         }
                     }

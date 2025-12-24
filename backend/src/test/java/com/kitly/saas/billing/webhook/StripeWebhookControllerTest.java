@@ -1,6 +1,7 @@
 package com.kitly.saas.billing.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kitly.saas.config.StripeConfig;
 import com.kitly.saas.entity.WebhookInbox;
 import com.kitly.saas.repository.WebhookInboxRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,13 +25,17 @@ class StripeWebhookControllerTest {
     @Mock
     private WebhookInboxRepository webhookInboxRepository;
     
+    @Mock
+    private StripeConfig stripeConfig;
+
     private StripeWebhookController controller;
     
     private static final String TEST_SECRET = "whsec_test_secret";
     
     @BeforeEach
     void setUp() {
-        controller = new StripeWebhookController(webhookInboxRepository, TEST_SECRET, new ObjectMapper());
+        when(stripeConfig.getWebhookSecret()).thenReturn(TEST_SECRET);
+        controller = new StripeWebhookController(webhookInboxRepository, stripeConfig, new ObjectMapper());
     }
     
     @Test
