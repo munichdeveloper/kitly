@@ -59,43 +59,43 @@ export default function SubscriptionsPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 sm:text-5xl">
             Your Subscription
           </h1>
-          <p className="mt-4 text-xl text-gray-600">
+          <p className="mt-4 text-xl text-gray-600 dark:text-gray-400">
             Manage your workspace subscription
           </p>
         </div>
 
         {error && (
-          <div className="mb-8 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-center">
+          <div className="mb-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-center">
             {error}
           </div>
         )}
 
         {tenants.length > 1 && (
           <div className="mb-8 max-w-md mx-auto">
-            <label htmlFor="tenant" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="tenant" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Select Workspace
             </label>
             <select
               id="tenant"
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              className="block w-full px-4 py-2.5 bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-gray-900 dark:text-gray-100 rounded-lg transition-all"
             >
               {tenants.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
@@ -107,47 +107,48 @@ export default function SubscriptionsPage() {
         )}
 
         {subscription ? (
-          <div className="mb-12 bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <div className="mb-12 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 shadow-sm rounded-xl overflow-hidden">
+            <div className="px-6 py-6 sm:px-8">
+              <h3 className="text-xl leading-6 font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <span className="text-2xl">💳</span>
                 Current Subscription
               </h3>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              <p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
                 Details about your current plan and billing status.
               </p>
             </div>
-            <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
-              <dl className="sm:divide-y sm:divide-gray-200">
-                <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Plan</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <div className="border-t border-gray-200 dark:border-zinc-800 px-6 py-5 sm:p-0">
+              <dl className="sm:divide-y sm:divide-gray-200 dark:sm:divide-zinc-800">
+                <div className="py-5 sm:py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-8">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Plan</dt>
+                  <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100 sm:mt-0 sm:col-span-2 font-semibold">
                     {subscription.plan}
                   </dd>
                 </div>
-                <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                  <dt className="text-sm font-medium text-gray-500">Status</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      subscription.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
-                      subscription.status === 'TRIALING' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                <div className="py-5 sm:py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-8">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</dt>
+                  <dd className="mt-1 text-sm sm:mt-0 sm:col-span-2">
+                    <span className={`px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      subscription.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' :
+                      subscription.status === 'TRIALING' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800' :
+                      'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
                     }`}>
                       {subscription.status}
                     </span>
                   </dd>
                 </div>
                 {subscription.trialEndsAt && subscription.status === 'TRIALING' && (
-                  <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Trial Ends</dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="py-5 sm:py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-8">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Trial Ends</dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100 sm:mt-0 sm:col-span-2">
                       {new Date(subscription.trialEndsAt).toLocaleDateString()}
                     </dd>
                   </div>
                 )}
                 {subscription.endsAt && (
-                  <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                    <dt className="text-sm font-medium text-gray-500">Ends At</dt>
-                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="py-5 sm:py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-8">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Ends At</dt>
+                    <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100 sm:mt-0 sm:col-span-2">
                       {new Date(subscription.endsAt).toLocaleDateString()}
                     </dd>
                   </div>
@@ -156,8 +157,8 @@ export default function SubscriptionsPage() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No subscription information available.</p>
+          <div className="text-center py-12 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl">
+            <p className="text-gray-500 dark:text-gray-400">No subscription information available.</p>
           </div>
         )}
       </div>
