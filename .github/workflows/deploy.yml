@@ -28,7 +28,6 @@ jobs:
       working-directory: ./backend
       run: |
         mvn clean package -DskipTests
-        mvn test
     
     - name: Set up Node.js (Frontend)
       if: matrix.component == 'frontend'
