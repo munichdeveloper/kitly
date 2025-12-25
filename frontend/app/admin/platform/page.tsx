@@ -10,16 +10,9 @@ import Button from '@/components/Button';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import { ApplicationSettingResponse } from '@/lib/types';
 
-interface PlatformSetting {
-  id: string;
-  key: string;
-  value: string;
-  type: string;
-  description: string;
-  isEncrypted: boolean;
-  updatedAt: string;
-}
+type PlatformSetting = ApplicationSettingResponse;
 
 export default function PlatformAdminPage() {
   const router = useRouter();
@@ -218,7 +211,6 @@ export default function PlatformAdminPage() {
           value: newCredential.apiKey,
           type: 'STRING',
           description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} API Key`,
-          isEncrypted: true,
         });
       } else {
         await ApiClient.createPlatformSetting({
@@ -226,7 +218,6 @@ export default function PlatformAdminPage() {
           value: newCredential.apiKey,
           type: 'STRING',
           description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} API Key`,
-          isEncrypted: true,
         });
       }
 
@@ -236,7 +227,6 @@ export default function PlatformAdminPage() {
           value: newCredential.webhookSecret,
           type: 'STRING',
           description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Webhook Secret`,
-          isEncrypted: true,
         });
       } else {
         await ApiClient.createPlatformSetting({
@@ -244,7 +234,6 @@ export default function PlatformAdminPage() {
           value: newCredential.webhookSecret,
           type: 'STRING',
           description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Webhook Secret`,
-          isEncrypted: true,
         });
       }
 
@@ -271,7 +260,6 @@ export default function PlatformAdminPage() {
         value: newPlan.priceId,
         type: 'STRING',
         description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
-        isEncrypted: false,
       });
 
       showToast('Plan added successfully', 'success');
@@ -321,7 +309,6 @@ export default function PlatformAdminPage() {
         value: editingSettings[key],
         type: setting.type,
         description: setting.description,
-        isEncrypted: setting.isEncrypted,
       });
 
       showToast('Setting updated successfully', 'success');
@@ -341,7 +328,6 @@ export default function PlatformAdminPage() {
           value: editingSettings[setting.key],
           type: setting.type,
           description: setting.description,
-          isEncrypted: setting.isEncrypted,
         }));
 
       if (updates.length === 0) {
@@ -365,7 +351,7 @@ export default function PlatformAdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner size="large" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -700,7 +686,7 @@ export default function PlatformAdminPage() {
 
       {/* Bulk Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleBulkUpdate} variant="primary" size="large">
+        <Button onClick={handleBulkUpdate} variant="primary">
           Save All Changes
         </Button>
       </div>

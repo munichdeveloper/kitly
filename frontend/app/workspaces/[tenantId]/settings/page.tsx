@@ -51,7 +51,7 @@ export default function SettingsPage() {
       const data = await ApiClient.getSettings(currentTenant.id);
       setSettings(data);
     } catch (error: any) {
-      showToast('error', error.message || 'Failed to load settings');
+      showToast(error.message || 'Failed to load settings', 'error');
     } finally {
       setLoading(false);
     }
@@ -108,16 +108,16 @@ export default function SettingsPage() {
 
       if (editingSetting) {
         await ApiClient.updateSetting(currentTenant.id, formData.key, request);
-        showToast('success', 'Setting updated successfully');
+        showToast('Setting updated successfully', 'success');
       } else {
         await ApiClient.createOrUpdateSetting(currentTenant.id, request);
-        showToast('success', 'Setting created successfully');
+        showToast('Setting created successfully', 'success');
       }
 
       handleCloseModal();
       loadSettings();
     } catch (error: any) {
-      showToast('error', error.message || 'Failed to save setting');
+      showToast(error.message || 'Failed to save setting', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -129,10 +129,10 @@ export default function SettingsPage() {
 
     try {
       await ApiClient.deleteSetting(currentTenant.id, key);
-      showToast('success', 'Setting deleted successfully');
+      showToast('Setting deleted successfully', 'success');
       loadSettings();
     } catch (error: any) {
-      showToast('error', error.message || 'Failed to delete setting');
+      showToast(error.message || 'Failed to delete setting', 'error');
     }
   };
 

@@ -63,12 +63,12 @@ export default function WorkspacesPage() {
       };
 
       const newTenant = await ApiClient.createTenant(request);
-      showToast('success', 'Workspace created successfully');
+      showToast('Workspace created successfully', 'success');
       handleCloseModal();
       await refreshTenants();
       router.push(`/workspaces/${newTenant.id}/dashboard`);
     } catch (error: any) {
-      showToast('error', error.message || 'Failed to create workspace');
+      showToast(error.message || 'Failed to create workspace', 'error');
     } finally {
       setSubmitting(false);
     }
