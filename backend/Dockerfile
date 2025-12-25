@@ -7,6 +7,7 @@ RUN mvn clean package -DskipTests
 
 # Run stage
 FROM eclipse-temurin:17-jre-alpine
+RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=build /app/target/kitly-backend-1.0.0.jar app.jar
 
