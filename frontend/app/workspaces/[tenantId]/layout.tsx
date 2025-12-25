@@ -39,6 +39,7 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     { name: 'Dashboard', href: `/workspaces/${tenantId}/dashboard`, icon: '📊' },
     { name: 'Members', href: `/workspaces/${tenantId}/members`, icon: '👥' },
     { name: 'Billing', href: `/workspaces/${tenantId}/billing`, icon: '💳' },
+    { name: 'Settings', href: `/workspaces/${tenantId}/settings`, icon: '⚙️' },
   ];
 
   const isActive = (href: string) => pathname === href;
