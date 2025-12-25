@@ -19,11 +19,9 @@ services:
       - VIRTUAL_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
-      # Note: All Stripe configuration (API keys, webhook secrets, price IDs) is now managed
-      # dynamically via Platform Settings in the database. Configure via Platform Admin UI
-      # at /admin/platform or via SQL. See backend/sql/configure_stripe_dynamic_pricing.sql
     networks:
       - auto-proxy
+      - kitly-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
       interval: 30s
@@ -31,6 +29,20 @@ services:
       retries: 3
       start_period: 40s
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=${FRONTEND_API_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - kitly-network
+
 networks:
+  kitly-network:
+    driver: bridge
   auto-proxy:
     external: true
