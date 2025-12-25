@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.HashMap;
@@ -19,12 +18,8 @@ import java.util.Map;
 @Slf4j
 public class StripeConfig {
 
-    @Value("${stripe.api-key}")
     private String apiKey;
-
-    @Value("${stripe.webhook-secret}")
     private String webhookSecret;
-
 
     // Dynamic plan to price ID mapping
     private Map<String, String> planPriceMap = new HashMap<>();
