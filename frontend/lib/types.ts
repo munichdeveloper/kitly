@@ -212,3 +212,25 @@ export type InviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';
 
 /** Tenant status - ACTIVE tenants are operational, SUSPENDED tenants have limited access, DELETED tenants are archived */
 export type TenantStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETED';
+
+// Application Settings Types
+export interface ApplicationSettingResponse {
+  id: string;
+  key: string;
+  value: string;
+  type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON' | 'URL' | 'EMAIL';
+  description?: string;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface ApplicationSettingRequest {
+  key: string;
+  value: string;
+  type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON' | 'URL' | 'EMAIL';
+  description?: string;
+  isPublic?: boolean;
+}
+

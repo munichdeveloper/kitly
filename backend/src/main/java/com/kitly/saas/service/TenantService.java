@@ -7,6 +7,7 @@ import com.kitly.saas.entity.Membership;
 import com.kitly.saas.entity.Subscription;
 import com.kitly.saas.entity.Tenant;
 import com.kitly.saas.entity.User;
+import com.kitly.saas.entity.EntitlementVersion;
 import com.kitly.saas.common.exception.BadRequestException;
 import com.kitly.saas.common.exception.ResourceNotFoundException;
 import com.kitly.saas.common.exception.UnauthorizedException;
@@ -14,6 +15,7 @@ import com.kitly.saas.repository.MembershipRepository;
 import com.kitly.saas.repository.SubscriptionRepository;
 import com.kitly.saas.repository.TenantRepository;
 import com.kitly.saas.repository.UserRepository;
+import com.kitly.saas.repository.EntitlementVersionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,15 +31,18 @@ public class TenantService {
     private final UserRepository userRepository;
     private final MembershipRepository membershipRepository;
     private final SubscriptionRepository subscriptionRepository;
-    
+    private final EntitlementVersionRepository entitlementVersionRepository;
+
     public TenantService(TenantRepository tenantRepository, 
                         UserRepository userRepository,
                         MembershipRepository membershipRepository,
-                        SubscriptionRepository subscriptionRepository) {
+                        SubscriptionRepository subscriptionRepository,
+                        EntitlementVersionRepository entitlementVersionRepository) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.entitlementVersionRepository = entitlementVersionRepository;
     }
     
     @Transactional
@@ -84,6 +89,14 @@ public class TenantService {
         
         subscriptionRepository.save(subscription);
         
+        // Create initial entitlement version to avoid race conditions
+        EntitlementVersion entitlementVersion = EntitlementVersion.builder()
+                .tenant(tenant)
+                .version(1L)
+                .build();
+
+        entitlementVersionRepository.save(entitlementVersion);
+
         return mapToTenantResponse(tenant);
     }
     

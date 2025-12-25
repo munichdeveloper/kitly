@@ -21,6 +21,8 @@ import {
   CheckoutResponse,
   SubscriptionResponse,
   Invoice,
+  ApplicationSettingResponse,
+  ApplicationSettingRequest,
 } from './types';
 
 // Re-export types for convenience
@@ -47,6 +49,8 @@ export type {
   CheckoutResponse,
   SubscriptionResponse,
   Invoice,
+  ApplicationSettingResponse,
+  ApplicationSettingRequest,
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
@@ -286,6 +290,68 @@ export class ApiClient {
       headers: this.getAuthHeader(),
     });
     return this.handleResponse<Invoice[]>(response);
+  }
+
+  // ========== Application Settings APIs ==========
+  static async getSettings(tenantId: string): Promise<ApplicationSettingResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<ApplicationSettingResponse[]>(response);
+  }
+
+  static async getSetting(tenantId: string, key: string): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings/${key}`, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async createOrUpdateSetting(
+    tenantId: string,
+    data: ApplicationSettingRequest
+  ): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async updateSetting(
+    tenantId: string,
+    key: string,
+    data: ApplicationSettingRequest
+  ): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings/${key}`, {
+      method: 'PUT',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async deleteSetting(tenantId: string, key: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings/${key}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  static async bulkUpdateSettings(
+    tenantId: string,
+    data: ApplicationSettingRequest[]
+  ): Promise<ApplicationSettingResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/tenants/${tenantId}/settings/bulk`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse[]>(response);
   }
 
   // ========== Health Check ==========

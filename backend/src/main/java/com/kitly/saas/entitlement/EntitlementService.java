@@ -79,16 +79,9 @@ public class EntitlementService {
         long activeSeats = membershipRepository.countByTenantIdAndStatus(
                 tenantId, Membership.MembershipStatus.ACTIVE);
         
-        // Get or create entitlement version
-        EntitlementVersion version = entitlementVersionRepository.findByTenant(tenant)
-                .orElseGet(() -> {
-                    EntitlementVersion newVersion = EntitlementVersion.builder()
-                            .tenant(tenant)
-                            .version(1L)
-                            .build();
-                    return entitlementVersionRepository.save(newVersion);
-                });
-        
+        // Get or create entitlement version (with retry on duplicate)
+        EntitlementVersion version = getOrCreateEntitlementVersion(tenant);
+
         // Build response
         return EntitlementResponse.builder()
                 .tenantId(tenantId)
@@ -109,17 +102,35 @@ public class EntitlementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         
-        EntitlementVersion version = entitlementVersionRepository.findByTenant(tenant)
-                .orElseGet(() -> {
-                    EntitlementVersion newVersion = EntitlementVersion.builder()
-                            .tenant(tenant)
-                            .version(1L)
-                            .build();
-                    return entitlementVersionRepository.save(newVersion);
-                });
-        
+        EntitlementVersion version = getOrCreateEntitlementVersion(tenant);
         version.setVersion(version.getVersion() + 1);
         entitlementVersionRepository.save(version);
+    }
+
+    /**
+     * Get or create EntitlementVersion with retry logic to handle race conditions
+     */
+    private EntitlementVersion getOrCreateEntitlementVersion(Tenant tenant) {
+        // Try to find existing version first
+        Optional<EntitlementVersion> existingVersion = entitlementVersionRepository.findByTenant(tenant);
+        if (existingVersion.isPresent()) {
+            return existingVersion.get();
+        }
+
+        // If not found, try to create - this may fail if another thread created it
+        try {
+            EntitlementVersion newVersion = EntitlementVersion.builder()
+                    .tenant(tenant)
+                    .version(1L)
+                    .build();
+            return entitlementVersionRepository.save(newVersion);
+        } catch (Exception e) {
+            // If save failed due to duplicate, try to fetch again
+            // Another thread likely created it between our check and insert
+            return entitlementVersionRepository.findByTenant(tenant)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Failed to get or create EntitlementVersion for tenant: " + tenant.getId(), e));
+        }
     }
     
     /**
