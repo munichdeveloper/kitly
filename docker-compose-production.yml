@@ -35,6 +35,9 @@ services:
       dockerfile: Dockerfile
     environment:
       - NEXT_PUBLIC_API_URL=${FRONTEND_API_URL}
+      - VIRTUAL_HOST=kitly-fe.n8n-instance-manager.de
+      - LETSENCRYPT_HOST=kitly-fe.n8n-instance-manager.de
+      - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
     depends_on:
       backend:
         condition: service_healthy
