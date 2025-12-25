@@ -35,14 +35,18 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${FRONTEND_API_URL}
+    expose:
+      - "3000"
     environment:
       - VIRTUAL_HOST=kitly-fe.n8n-instance-manager.de
+      - VIRTUAL_PORT=3000
       - LETSENCRYPT_HOST=kitly-fe.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
     depends_on:
       backend:
         condition: service_healthy
     networks:
+      - auto-proxy
       - kitly-network
 
 networks:
