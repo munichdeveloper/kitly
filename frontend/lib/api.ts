@@ -369,6 +369,15 @@ export class ApiClient {
     return this.handleResponse<ApplicationSettingResponse>(response);
   }
 
+  static async createPlatformSetting(data: ApplicationSettingRequest): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
   static async updatePlatformSetting(key: string, data: ApplicationSettingRequest): Promise<ApplicationSettingResponse> {
     const response = await fetch(`${API_BASE_URL}/platform/settings/${key}`, {
       method: 'PUT',
@@ -376,6 +385,16 @@ export class ApiClient {
       body: JSON.stringify(data),
     });
     return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async deletePlatformSetting(key: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/${key}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeader(),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete platform setting');
+    }
   }
 
   static async bulkUpdatePlatformSettings(data: ApplicationSettingRequest[]): Promise<ApplicationSettingResponse[]> {
@@ -401,6 +420,21 @@ export class ApiClient {
       headers: this.getAuthHeader(),
     });
     return this.handleResponse<{ mode: string }>(response);
+  }
+
+  static async refreshStripeConfig(): Promise<{ message: string; mode: string; configuredPlans: string[]; planCount: number }> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/refresh`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<{ message: string; mode: string; configuredPlans: string[]; planCount: number }>(response);
+  }
+
+  static async getStripePlanPrices(): Promise<Record<string, string>> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/plans`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<Record<string, string>>(response);
   }
 
   // ========== Health Check ==========

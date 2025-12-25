@@ -74,12 +74,11 @@ public class StripeService {
     }
 
     private String getPriceIdForPlan(Subscription.SubscriptionPlan plan) {
-        return switch (plan) {
-            case STARTER -> stripeConfig.getStarterPriceId();
-            case BUSINESS -> stripeConfig.getBusinessPriceId();
-            case ENTERPRISE -> stripeConfig.getEnterprisePriceId();
-            default -> throw new IllegalArgumentException("Invalid plan for checkout: " + plan);
-        };
+        String priceId = stripeConfig.getPriceIdForPlan(plan.name());
+        if (priceId == null) {
+            throw new IllegalArgumentException("No price ID configured for plan: " + plan);
+        }
+        return priceId;
     }
 }
 

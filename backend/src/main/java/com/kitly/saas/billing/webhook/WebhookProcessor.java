@@ -207,12 +207,13 @@ public class WebhookProcessor {
                     // Try to match by Price ID first
                     String priceId = (String) price.get("id");
                     if (priceId != null) {
-                        if (priceId.equals(stripeConfig.getStarterPriceId())) {
-                            subscription.setPlan(Subscription.SubscriptionPlan.STARTER);
-                        } else if (priceId.equals(stripeConfig.getBusinessPriceId())) {
-                            subscription.setPlan(Subscription.SubscriptionPlan.BUSINESS);
-                        } else if (priceId.equals(stripeConfig.getEnterprisePriceId())) {
-                            subscription.setPlan(Subscription.SubscriptionPlan.ENTERPRISE);
+                        String planName = stripeConfig.getPlanForPriceId(priceId);
+                        if (planName != null) {
+                            try {
+                                subscription.setPlan(Subscription.SubscriptionPlan.valueOf(planName));
+                            } catch (IllegalArgumentException e) {
+                                logger.warn("Unknown plan name from price ID: {}", planName);
+                            }
                         }
                     }
 

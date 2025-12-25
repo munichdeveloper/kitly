@@ -125,6 +125,27 @@ public class PlatformAdminController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/stripe/refresh")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<Map<String, Object>> refreshStripeConfig() {
+        stripeConfig.refreshStripeConfig();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Stripe configuration refreshed successfully");
+        response.put("mode", stripeConfig.getCurrentMode());
+        response.put("configuredPlans", stripeConfig.getAllPlanPrices().keySet());
+        response.put("planCount", stripeConfig.getAllPlanPrices().size());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/stripe/plans")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<Map<String, String>> getAllPlanPrices() {
+        Map<String, String> planPrices = stripeConfig.getAllPlanPrices();
+        return ResponseEntity.ok(planPrices);
+    }
+
     private UUID getUserIdFromAuthentication(Authentication authentication) {
         String username = authentication.getName();
         User user = userRepository.findByUsername(username)

@@ -19,11 +19,9 @@ services:
       - VIRTUAL_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
-      - STRIPE_API_KEY=${STRIPE_API_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER}
-      - STRIPE_PRICE_BUSINESS=${STRIPE_PRICE_BUSINESS}
-      - STRIPE_PRICE_ENTERPRISE=${STRIPE_PRICE_ENTERPRISE}
+      # Note: All Stripe configuration (API keys, webhook secrets, price IDs) is now managed
+      # dynamically via Platform Settings in the database. Configure via Platform Admin UI
+      # at /admin/platform or via SQL. See backend/sql/configure_stripe_dynamic_pricing.sql
     networks:
       - auto-proxy
     healthcheck:

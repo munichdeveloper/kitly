@@ -39,12 +39,21 @@ cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
 stripe:
-  api-key: ${STRIPE_API_KEY:sk_..}
-  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_..}
-  price:
-    starter: ${STRIPE_PRICE_STARTER:price_starter}
-    business: ${STRIPE_PRICE_BUSINESS:price_business}
-    enterprise: ${STRIPE_PRICE_ENTERPRISE:price_enterprise}
+  # All Stripe configuration is now managed dynamically via Platform Settings
+  # API keys, webhook secrets, and price IDs are loaded from the database at runtime
+  #
+  # Configure via Platform Admin UI: /admin/platform
+  # Or via SQL: backend/sql/configure_stripe_dynamic_pricing.sql
+  #
+  # Format for Platform Settings:
+  #   stripe.mode = test|live
+  #   stripe.{mode}.api_key = sk_test_... | sk_live_...
+  #   stripe.{mode}.webhook_secret = whsec_...
+  #   stripe.{mode}.plan.{PLAN_NAME} = price_...
+  #
+  # The values below are fallback defaults for local development only
+  api-key: ${STRIPE_API_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}

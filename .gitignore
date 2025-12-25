@@ -45,3 +45,5 @@ yarn-error.log*
 Thumbs.db
 /backend/sql/
 /backend/sql/
+/backend/docs/
+/frontend/docs/
