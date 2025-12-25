@@ -2,6 +2,8 @@ package com.kitly.saas.controller;
 
 import com.kitly.saas.dto.ApplicationSettingDTO;
 import com.kitly.saas.dto.ApplicationSettingRequest;
+import com.kitly.saas.entity.User;
+import com.kitly.saas.repository.UserRepository;
 import com.kitly.saas.security.annotation.TenantAccessCheck;
 import com.kitly.saas.service.ApplicationSettingService;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import java.util.UUID;
 public class ApplicationSettingController {
 
     private final ApplicationSettingService settingService;
+    private final UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'MEMBER')")
@@ -48,7 +51,7 @@ public class ApplicationSettingController {
             @Valid @RequestBody ApplicationSettingRequest request,
             Authentication authentication) {
 
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = getUserIdFromAuthentication(authentication);
         ApplicationSettingDTO setting = settingService.createOrUpdateSetting(tenantId, request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(setting);
     }
@@ -64,7 +67,7 @@ public class ApplicationSettingController {
 
         // Ensure the key in the path matches the key in the request
         request.setKey(key);
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = getUserIdFromAuthentication(authentication);
         ApplicationSettingDTO setting = settingService.createOrUpdateSetting(tenantId, request, userId);
         return ResponseEntity.ok(setting);
     }
@@ -87,9 +90,16 @@ public class ApplicationSettingController {
             @Valid @RequestBody List<ApplicationSettingRequest> requests,
             Authentication authentication) {
 
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = getUserIdFromAuthentication(authentication);
         List<ApplicationSettingDTO> settings = settingService.bulkUpdateSettings(tenantId, requests, userId);
         return ResponseEntity.ok(settings);
+    }
+
+    private UUID getUserIdFromAuthentication(Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        return user.getId();
     }
 }
 

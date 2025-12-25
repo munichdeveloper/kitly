@@ -23,20 +23,30 @@ public class AdminUserInitializer {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_EMAIL = "admin@kitly.local";
+    private static final String PLATFORM_ADMIN_USERNAME = "platform-admin";
+    private static final String PLATFORM_ADMIN_EMAIL = "platform-admin@kitly.local";
     private static final int PASSWORD_LENGTH = 16;
     private static final String PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
 
     @PostConstruct
     public void initAdminUser() {
-        // Prüfen, ob Admin-User bereits existiert
-        if (userRepository.existsByUsername(ADMIN_USERNAME)) {
-            log.info("Admin-Benutzer '{}' existiert bereits.", ADMIN_USERNAME);
+        // Prüfen, ob Platform-Admin bereits existiert
+        if (userRepository.existsByUsername(PLATFORM_ADMIN_USERNAME)) {
+            log.info("Platform-Admin '{}' existiert bereits.", PLATFORM_ADMIN_USERNAME);
             return;
         }
 
-        // Admin-Rolle finden oder erstellen
+        // Platform-Admin-Rolle finden oder erstellen
+        Role platformAdminRole = roleRepository.findByName(Role.RoleName.ROLE_PLATFORM_ADMIN)
+                .orElseGet(() -> {
+                    log.info("Platform-Admin-Rolle nicht gefunden, erstelle neue Rolle...");
+                    Role newRole = Role.builder()
+                            .name(Role.RoleName.ROLE_PLATFORM_ADMIN)
+                            .build();
+                    return roleRepository.save(newRole);
+                });
+
+        // Optional: Auch ROLE_ADMIN hinzufügen für erweiterte Berechtigungen
         Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN)
                 .orElseGet(() -> {
                     Role newRole = Role.builder()
@@ -48,32 +58,36 @@ public class AdminUserInitializer {
         // Passwort generieren
         String generatedPassword = generateSecurePassword();
 
-        // Admin-Benutzer erstellen
+        // Platform-Admin-Benutzer erstellen
         Set<Role> roles = new HashSet<>();
-        roles.add(adminRole);
+        roles.add(platformAdminRole);
+        roles.add(adminRole); // Auch normale Admin-Rechte für volle Funktionalität
 
-        User adminUser = User.builder()
-                .username(ADMIN_USERNAME)
-                .email(ADMIN_EMAIL)
+        User platformAdminUser = User.builder()
+                .username(PLATFORM_ADMIN_USERNAME)
+                .email(PLATFORM_ADMIN_EMAIL)
                 .password(passwordEncoder.encode(generatedPassword))
-                .firstName("System")
+                .firstName("Platform")
                 .lastName("Administrator")
                 .roles(roles)
                 .isActive(true)
                 .build();
 
-        userRepository.save(adminUser);
+        userRepository.save(platformAdminUser);
 
         // Passwort auf der Konsole ausgeben
         log.warn("╔═══════════════════════════════════════════════════════════════════╗");
-        log.warn("║           ADMIN-BENUTZER ERFOLGREICH ERSTELLT                     ║");
+        log.warn("║         PLATFORM-ADMIN ERFOLGREICH ERSTELLT                       ║");
         log.warn("╠═══════════════════════════════════════════════════════════════════╣");
-        log.warn("║  Benutzername: {}                                            ║", ADMIN_USERNAME);
-        log.warn("║  E-Mail:       {}                                  ║", ADMIN_EMAIL);
+        log.warn("║  Benutzername: {}                                   ║", PLATFORM_ADMIN_USERNAME);
+        log.warn("║  E-Mail:       {}                       ║", PLATFORM_ADMIN_EMAIL);
         log.warn("║  Passwort:     {}                          ║", generatedPassword);
+        log.warn("╠═══════════════════════════════════════════════════════════════════╣");
+        log.warn("║  ROLLEN: ROLE_PLATFORM_ADMIN, ROLE_ADMIN                          ║");
         log.warn("╠═══════════════════════════════════════════════════════════════════╣");
         log.warn("║  WICHTIG: Bitte ändern Sie das Passwort nach dem ersten Login!   ║");
         log.warn("║  Speichern Sie diese Anmeldedaten an einem sicheren Ort.         ║");
+        log.warn("║  Mit diesem Account können Sie auf /admin/platform zugreifen.    ║");
         log.warn("╚═══════════════════════════════════════════════════════════════════╝");
     }
 

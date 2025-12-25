@@ -10,6 +10,7 @@ interface AuthContextType {
   signup: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  isPlatformAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,8 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const isPlatformAdmin = () => {
+    return user?.roles?.includes('ROLE_PLATFORM_ADMIN') ?? false;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, signup, logout, loading, isPlatformAdmin }}>
       {children}
     </AuthContext.Provider>
   );

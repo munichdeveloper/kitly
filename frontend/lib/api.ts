@@ -354,6 +354,55 @@ export class ApiClient {
     return this.handleResponse<ApplicationSettingResponse[]>(response);
   }
 
+  // ========== Platform Admin Settings ==========
+  static async getPlatformSettings(): Promise<ApplicationSettingResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<ApplicationSettingResponse[]>(response);
+  }
+
+  static async getPlatformSetting(key: string): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/${key}`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async updatePlatformSetting(key: string, data: ApplicationSettingRequest): Promise<ApplicationSettingResponse> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/${key}`, {
+      method: 'PUT',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse>(response);
+  }
+
+  static async bulkUpdatePlatformSettings(data: ApplicationSettingRequest[]): Promise<ApplicationSettingResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/bulk`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<ApplicationSettingResponse[]>(response);
+  }
+
+  static async switchStripeMode(mode: 'test' | 'live'): Promise<{ message: string; mode: string }> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/switch-mode`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify({ mode }),
+    });
+    return this.handleResponse<{ message: string; mode: string }>(response);
+  }
+
+  static async getCurrentStripeMode(): Promise<{ mode: string }> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/current-mode`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<{ mode: string }>(response);
+  }
+
   // ========== Health Check ==========
   static async checkHealth(): Promise<{ status: string; application: string }> {
     const response = await fetch(`${API_BASE_URL}/health`);

@@ -43,3 +43,5 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+/backend/sql/
+/backend/sql/

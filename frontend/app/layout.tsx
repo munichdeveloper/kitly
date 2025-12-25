@@ -4,6 +4,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { TenantProvider } from "@/lib/tenant-context";
 import { ToastProvider } from "@/lib/toast-context";
 import ToastContainer from "@/components/ToastContainer";
+import PlatformAdminLink from "@/components/PlatformAdminLink";
 
 export const metadata: Metadata = {
   title: "Kitly - B2B SaaS Platform",
@@ -22,6 +23,7 @@ export default function RootLayout({
           <AuthProvider>
             <TenantProvider>
               {children}
+              <PlatformAdminLink />
               <ToastContainer />
             </TenantProvider>
           </AuthProvider>
