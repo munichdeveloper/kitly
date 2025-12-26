@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+import static com.stripe.param.billingportal.SessionCreateParams.*;
+
 @Service
 public class StripeService {
 
@@ -41,8 +43,8 @@ public class StripeService {
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
-                .setSuccessUrl(frontendUrl + "/dashboard?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl(frontendUrl + "/pricing")
+                .setSuccessUrl(frontendUrl + "/confirm?session_id={CHECKOUT_SESSION_ID}")
+                .setCancelUrl(frontendUrl + "/cancel")
                 .setCustomerEmail(user.getEmail())
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
@@ -63,11 +65,10 @@ public class StripeService {
     }
 
     public String createPortalSession(String customerId) throws StripeException {
-        com.stripe.param.billingportal.SessionCreateParams params =
-                com.stripe.param.billingportal.SessionCreateParams.builder()
-                        .setCustomer(customerId)
-                        .setReturnUrl(frontendUrl + "/dashboard")
-                        .build();
+        var params = builder()
+                .setCustomer(customerId)
+                .setReturnUrl(frontendUrl + "/confirm")
+                .build();
 
         com.stripe.model.billingportal.Session session = com.stripe.model.billingportal.Session.create(params);
         return session.getUrl();
