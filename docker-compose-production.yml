@@ -19,6 +19,7 @@ services:
       - VIRTUAL_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
+      - FRONTEND_URL=${FRONTEND_URL}
     networks:
       - auto-proxy
       - kitly-network
