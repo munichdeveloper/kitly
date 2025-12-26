@@ -50,8 +50,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     
-    steps: 
-    - name: Deploy to Production Server
+    steps:
+    - name: Setup SSH Known Hosts
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -59,31 +59,68 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT || 22 }}
         script: |
+          set -e
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          echo "✅ SSH known_hosts configured"
+    
+    - name: Pull Latest Changes
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          set -e
           cd ${{ secrets.DEPLOY_PATH }}
-          
-          # Git Pull
           echo "📥 Pulling latest changes..."
           git pull origin main
-          
-          # Export Environment Variables
-          export CORS_ALLOWED_ORIGINS="${{ secrets.CORS_ALLOWED_ORIGINS }}"
-          export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
-          export FRONTEND_API_URL="${{ secrets.FRONTEND_API_URL }}"
-          
-          # Docker Compose Build & Deploy
+          echo "✅ Git pull successful"
+    
+    - name: Build Docker Images
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
           echo "🐳 Building Docker images..."
-          docker compose -f docker-compose-production.yml build --no-cache
-          
+          docker compose --env-file .env -f docker-compose-production.yml build --no-cache
+          echo "✅ Docker build successful"
+    
+    - name: Deploy Services
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
           echo "🚀 Starting services..."
-          docker compose -f docker-compose-production.yml up -d
-          
-          # Cleanup
+          docker compose --env-file .env -f docker-compose-production.yml up -d
+          echo "✅ Services started successfully"
+    
+    - name: Cleanup and Health Check
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.SSH_PORT || 22 }}
+        script: |
+          set -e
+          cd ${{ secrets.DEPLOY_PATH }}
           echo "🧹 Cleaning up unused Docker resources..."
           docker system prune -f
-          
-          # Health Check
           echo "🏥 Waiting for services to be healthy..."
           sleep 10
-          docker compose -f docker-compose-production.yml ps
-          
+          docker compose --env-file .env -f docker-compose-production.yml ps
+          echo "📋 Recent logs:"
+          docker compose --env-file .env -f docker-compose-production.yml logs --tail=50
           echo "✅ Deployment completed!"
