@@ -321,14 +321,61 @@ export default function PlatformAdminPage() {
 
   const handleBulkUpdate = async () => {
     try {
-      const updates = settings
-        .filter((setting) => setting.value !== editingSettings[setting.key])
-        .map((setting) => ({
-          key: setting.key,
-          value: editingSettings[setting.key],
-          type: setting.type,
-          description: setting.description,
-        }));
+      const updates: any[] = [];
+
+      // 1. Check for changes in existing settings (Plans)
+      settings.forEach((setting) => {
+        if (editingSettings[setting.key] !== undefined && setting.value !== editingSettings[setting.key]) {
+          updates.push({
+            key: setting.key,
+            value: editingSettings[setting.key],
+            type: setting.type,
+            description: setting.description,
+          });
+        }
+      });
+
+      // 2. Check for changes in Credentials
+      const mode = settingsMode;
+      const apiKeyKey = `stripe.${mode}.api_key`;
+      const webhookSecretKey = `stripe.${mode}.webhook_secret`;
+
+      const existingApiKey = settings.find(s => s.key === apiKeyKey);
+      const existingWebhookSecret = settings.find(s => s.key === webhookSecretKey);
+
+      if (newCredential.apiKey && (!existingApiKey || existingApiKey.value !== newCredential.apiKey)) {
+        updates.push({
+          key: apiKeyKey,
+          value: newCredential.apiKey,
+          type: 'STRING',
+          description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} API Key`,
+        });
+      }
+
+      if (newCredential.webhookSecret && (!existingWebhookSecret || existingWebhookSecret.value !== newCredential.webhookSecret)) {
+        updates.push({
+          key: webhookSecretKey,
+          value: newCredential.webhookSecret,
+          type: 'STRING',
+          description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Webhook Secret`,
+        });
+      }
+
+      // 3. Check for New Plan
+      if (newPlan.name && newPlan.priceId) {
+        const planKey = `stripe.${mode}.plan.${newPlan.name.toUpperCase()}`;
+        // Check if this plan already exists in updates (unlikely but good safety) or settings
+        const planExists = settings.some(s => s.key === planKey);
+
+        if (!planExists) {
+           updates.push({
+            key: planKey,
+            value: newPlan.priceId,
+            type: 'STRING',
+            description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
+          });
+        }
+      }
 
       if (updates.length === 0) {
         showToast('No changes to save', 'info');
@@ -336,8 +383,20 @@ export default function PlatformAdminPage() {
       }
 
       await ApiClient.bulkUpdatePlatformSettings(updates);
+
+      // Reset new plan inputs if a new plan was added
+      if (newPlan.name && newPlan.priceId) {
+        setNewPlan({ name: '', priceId: '' });
+      }
+
       showToast(`${updates.length} settings updated successfully`, 'success');
       await loadData();
+
+      // If we added a plan or changed credentials, we should refresh stripe config
+      if (updates.some(u => u.key.includes('.plan.') || u.key.includes('api_key') || u.key.includes('webhook_secret'))) {
+          await handleRefreshStripeConfig();
+      }
+
     } catch (err: any) {
       console.error('Error bulk updating settings:', err);
       showToast(err.message || 'Failed to update settings', 'error');
