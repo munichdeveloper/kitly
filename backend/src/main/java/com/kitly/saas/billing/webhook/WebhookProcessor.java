@@ -232,8 +232,8 @@ public class WebhookProcessor {
         subscriptionRepository.save(subscription);
         
         // Recompute entitlements
-        entitlementService.bumpEntitlementVersion(tenantId);
-        
+        entitlementService.syncEntitlements(tenantId);
+
         // Publish outbox event
         Map<String, Object> eventPayload = new HashMap<>();
         eventPayload.put("tenantId", tenantId.toString());

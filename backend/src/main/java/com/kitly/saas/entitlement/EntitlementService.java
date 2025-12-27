@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Service for computing and managing tenant entitlements.
@@ -108,6 +109,73 @@ public class EntitlementService {
     }
 
     /**
+     * Sync entitlements from the current subscription plan to the database.
+     * This ensures the entitlements table reflects the current plan's features.
+     */
+    @Transactional
+    public void syncEntitlements(UUID tenantId) {
+        Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
+
+        Subscription subscription = getActiveSubscription(tenantId);
+        String planCode = mapSubscriptionPlanToPlanCode(subscription.getPlan());
+        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode);
+
+        if (plan == null) {
+            return;
+        }
+
+        // Get existing entitlements
+        List<Entitlement> existingEntitlements = entitlementRepository.findByTenant(tenant);
+        Map<String, Entitlement> existingMap = existingEntitlements.stream()
+                .collect(Collectors.toMap(Entitlement::getFeatureKey, e -> e));
+
+        // Sync plan entitlements
+        for (Map.Entry<String, String> entry : plan.getEntitlements().entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            Entitlement entitlement = existingMap.get(key);
+            if (entitlement == null) {
+                entitlement = Entitlement.builder()
+                        .tenant(tenant)
+                        .featureKey(key)
+                        .featureType(inferFeatureType(value))
+                        .build();
+            }
+
+            updateEntitlementValue(entitlement, value);
+            entitlementRepository.save(entitlement);
+        }
+
+        bumpEntitlementVersion(tenantId);
+    }
+
+    private Entitlement.FeatureType inferFeatureType(String value) {
+        if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+            return Entitlement.FeatureType.BOOLEAN;
+        }
+        return Entitlement.FeatureType.LIMIT;
+    }
+
+    private void updateEntitlementValue(Entitlement entitlement, String value) {
+        if (entitlement.getFeatureType() == Entitlement.FeatureType.BOOLEAN) {
+            entitlement.setEnabled(Boolean.parseBoolean(value));
+        } else {
+            if ("unlimited".equalsIgnoreCase(value)) {
+                entitlement.setLimitValue(-1L);
+            } else {
+                try {
+                    entitlement.setLimitValue(Long.parseLong(value));
+                } catch (NumberFormatException e) {
+                    entitlement.setLimitValue(0L);
+                }
+            }
+            entitlement.setEnabled(true);
+        }
+    }
+
+    /**
      * Get or create EntitlementVersion with retry logic to handle race conditions
      */
     private EntitlementVersion getOrCreateEntitlementVersion(Tenant tenant) {
@@ -163,9 +231,14 @@ public class EntitlementService {
     private String getEntitlementValue(Entitlement entitlement) {
         return switch (entitlement.getFeatureType()) {
             case BOOLEAN -> entitlement.getEnabled() ? "true" : "false";
-            case LIMIT, QUOTA -> entitlement.getLimitValue() != null 
-                    ? entitlement.getLimitValue().toString() 
-                    : "0";
+            case LIMIT, QUOTA -> {
+                if (entitlement.getLimitValue() != null && entitlement.getLimitValue() == -1) {
+                    yield "unlimited";
+                }
+                yield entitlement.getLimitValue() != null
+                        ? entitlement.getLimitValue().toString()
+                        : "0";
+            }
         };
     }
 }
