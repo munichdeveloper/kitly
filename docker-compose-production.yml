@@ -20,6 +20,18 @@ services:
       - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
       - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
       - FRONTEND_URL=${FRONTEND_URL}
+      # E-Mail-Verifizierung
+      - EMAIL_VERIFICATION_ENABLED=${EMAIL_VERIFICATION_ENABLED:-true}
+      - EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS=${EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS:-24}
+      # E-Mail-Server-Konfiguration
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM:-noreply@kitly.com}
+      # E-Mail-Template-Konfiguration
+      - EMAIL_LOCALE=${EMAIL_LOCALE:-de_DE}
+      - EMAIL_BRANDING=${EMAIL_BRANDING:-kitly}
     networks:
       - auto-proxy
       - kitly-network

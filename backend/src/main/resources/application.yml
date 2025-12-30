@@ -57,9 +57,11 @@ cors:
 
 
 app:
-  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  frontend-url: ${FRONTEND_URL:http://localhost:3000} # NIM Frontend URL
   email:
     from: ${MAIL_FROM:noreply@kitly.com}
+    locale: ${EMAIL_LOCALE:de_DE}
+    branding: ${EMAIL_BRANDING:kitly}
   email-verification:
     enabled: ${EMAIL_VERIFICATION_ENABLED:false}
     token-validity-hours: ${EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS:24}

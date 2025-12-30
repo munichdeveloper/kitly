@@ -40,6 +40,9 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME:-}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-noreply@kitly.com}
+      # E-Mail-Template-Konfiguration
+      - EMAIL_LOCALE=${EMAIL_LOCALE:-de_DE}
+      - EMAIL_BRANDING=${EMAIL_BRANDING:-kitly}
       # Frontend URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     networks:
