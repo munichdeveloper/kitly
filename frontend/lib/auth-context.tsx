@@ -79,6 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firstName,
         lastName,
       });
+
+      // Wenn kein Token zurückgegeben wird, ist E-Mail-Verifizierung aktiviert
+      if (!response.token) {
+        // Keine weitere Aktion - Benutzer muss E-Mail bestätigen
+        return;
+      }
+
+      // Ansonsten normale Anmeldung
       localStorage.setItem('token', response.token);
       // Set cookie for middleware
       document.cookie = `token=${response.token}; path=/; max-age=86400; SameSite=Strict`;

@@ -20,6 +20,23 @@ spring:
       hibernate:
         format_sql: true
   
+  # E-Mail-Konfiguration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
   security:
     user:
       name: admin
@@ -41,6 +58,11 @@ cors:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  email:
+    from: ${MAIL_FROM:noreply@kitly.com}
+  email-verification:
+    enabled: ${EMAIL_VERIFICATION_ENABLED:false}
+    token-validity-hours: ${EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS:24}
 
 outbox:
   publisher:

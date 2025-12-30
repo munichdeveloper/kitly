@@ -70,6 +70,10 @@ public class User {
     @Builder.Default
     private Boolean isActive = true;
     
+    @Column(name = "email_verified")
+    @Builder.Default
+    private Boolean emailVerified = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;

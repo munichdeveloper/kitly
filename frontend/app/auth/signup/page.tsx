@@ -53,7 +53,17 @@ export default function SignupPage() {
         formData.firstName,
         formData.lastName
       );
-      router.push('/workspaces');
+
+      // Prüfen, ob wir eingeloggt sind (Token vorhanden)
+      // Wenn nicht, wurde E-Mail-Verifizierung aktiviert
+      const token = localStorage.getItem('token');
+      if (token) {
+        // Direkte Anmeldung - E-Mail-Verifizierung deaktiviert
+        router.push('/workspaces');
+      } else {
+        // E-Mail-Verifizierung aktiviert - zur Check-Email-Seite
+        router.push('/auth/check-email');
+      }
     } catch (err) {
       console.error('Signup failed:', err);
       setError('Failed to create account. Username or email may already exist.');
