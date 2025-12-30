@@ -225,7 +225,7 @@ jobs:
         SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
     
     - name: Notify Slack - Deployment Failed
-      if: failure()
+      if: failure() || cancelled()
       uses: slackapi/slack-github-action@v1.27.0
       with:
         payload: |
