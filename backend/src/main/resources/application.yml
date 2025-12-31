@@ -58,6 +58,7 @@ cors:
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000} # NIM Frontend URL
+  frontend-app-url: ${FRONTEND_APP_URL:http://localhost:3001} # NIM App Frontend URL
   email:
     from: ${MAIL_FROM:noreply@kitly.com}
     locale: ${EMAIL_LOCALE:de_DE}

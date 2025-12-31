@@ -2,8 +2,7 @@ package com.kitly.saas.service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -12,9 +11,8 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class EmailService {
-
-    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     private final JavaMailSender mailSender;
     private final EmailTemplateService templateService;
@@ -24,6 +22,9 @@ public class EmailService {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    @Value("${app.frontend-app-url}")
+    private String frontendAppUrl;
 
     @Value("${app.email.locale:de_DE}")
     private String defaultLocale;
@@ -53,6 +54,7 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("Bestätige deine E-Mail-Adresse");
 
+            // Die URL zur E-Mail-Verifizierung muss gegen das Landing Page Frontend zeigen
             String verificationUrl = frontendUrl + "/signup/verify-email?token=" + token;
 
             String template = templateService.loadVerificationTemplate(locale, branding);
@@ -64,10 +66,10 @@ public class EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            logger.info("Verification email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
+            log.info("Verification email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
 
         } catch (MessagingException e) {
-            logger.error("Failed to send verification email to: {}", toEmail, e);
+            log.error("Failed to send verification email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
@@ -89,7 +91,8 @@ public class EmailService {
             helper.setTo(toEmail);
             helper.setSubject("Passwort zurücksetzen");
 
-            String resetUrl = frontendUrl + "/reset-password?token=" + token;
+            // Die URL zum Zurücksetzen des Passworts muss gegen das App-Frontend zeigen
+            String resetUrl = frontendAppUrl + "/reset-password?token=" + token;
 
             String template = templateService.loadPasswordResetTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
@@ -100,10 +103,10 @@ public class EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            logger.info("Password reset email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
+            log.info("Password reset email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
 
         } catch (MessagingException e) {
-            logger.error("Failed to send password reset email to: {}", toEmail, e);
+            log.error("Failed to send password reset email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send password reset email", e);
         }
     }

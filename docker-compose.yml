@@ -45,6 +45,7 @@ services:
       - EMAIL_BRANDING=${EMAIL_BRANDING:-kitly}
       # Frontend URL
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - FRONTEND_APP_URL=${FRONTEND_APP_URL}
     networks:
       - kitly-network
     depends_on:
