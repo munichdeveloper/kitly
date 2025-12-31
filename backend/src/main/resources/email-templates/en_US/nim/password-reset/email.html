@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>n8n Instance Manager - Reset Password</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>n8n Instance Manager - E-Mail bestätigen</title>
     <style>
         * {
             margin: 0;
@@ -84,13 +84,7 @@
             border-radius: 6px;
             font-weight: 600;
             font-size: 16px;
-            transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        .button:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
         }
 
         .link-box {
@@ -186,40 +180,45 @@
 <div class="email-container">
     <div class="header">
         <div class="logo">n8n Instance Manager</div>
-        <div class="subtitle">Business Edition</div>
+        <div class="subtitle">Password Reset</div>
     </div>
 
     <div class="content">
-        <h2 class="greeting">Hallo {{username}},</h2>
+        <h2 class="greeting">Hello {{username}},</h2>
 
         <p class="text">
-            Willkommen beim n8n Instance Manager!<br/><br/> Um dein Konto zu aktivieren und mit dem professionellen
-            Management deiner n8n-Instanzen zu beginnen, bestätige bitte deine E-Mail-Adresse.
+            We received a request to reset your password for the n8n Instance Manager.
+        </p>
+
+        <p class="text">
+            <strong style="color: #10b981;">If you didn't make this request</strong>, you can simply ignore this email.
+            Your password will remain unchanged and secure.
+        </p>
+
+        <p class="text">
+            To reset your password, click the button below:
         </p>
 
         <div class="button-container">
-            <a href="{{verificationUrl}}" class="button">E-Mail-Adresse bestätigen</a>
+            <a href="{{resetUrl}}" class="button">Set New Password</a>
         </div>
 
         <div class="link-box">
-            <div class="link-label">Oder kopiere diesen Link in deinen Browser:</div>
-            <div class="link-url">{{verificationUrl}}</div>
+            <div class="link-label">Alternatively, you can copy this link to your browser:</div>
+            <div class="link-url">{{resetUrl}}</div>
         </div>
 
         <div class="notice">
             <p class="notice-text">
-                <span class="notice-highlight">Wichtig:</span> Dieser Verifizierungslink ist 24 Stunden gültig.
+                <span class="notice-highlight">Important:</span> For security reasons, this link is only valid for 24
+                hours.
             </p>
         </div>
-
-        <p class="text">
-            Falls du dich nicht beim n8n Instance Manager registriert hast, kannst du diese E-Mail ignorieren. Dein
-            Account wird nicht aktiviert, solange du den Link nicht bestätigst.
-        </p>
     </div>
 
     <div class="footer">
-        <p class="footer-text">&copy; 2025 n8n Instance Manager. Alle Rechte vorbehalten.</p>
+        <p class="footer-text">&copy; 2025 n8n Instance Manager. All rights reserved.</p>
+        <p class="footer-brand">Powered by <span>n8n</span></p>
     </div>
 </div>
 </body>

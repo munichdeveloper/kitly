@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>n8n Instance Manager - Verify E-Mail</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
@@ -182,43 +183,45 @@
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <div class="header">
-            <div class="logo">n8n Instance Manager</div>
-            <div class="subtitle">Business Edition</div>
-        </div>
-
-        <div class="content">
-            <h2 class="greeting">Hello {{username}},</h2>
-
-            <p class="text">
-                Welcome to the n8n Instance Manager!<br /><br /> To activate your account and start with the professional management of your n8n instances, please verify your email address.
-            </p>
-
-            <div class="button-container">
-                <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
-            </div>
-
-            <div class="link-box">
-                <div class="link-label">Or copy this link to your browser:</div>
-                <div class="link-url">{{verificationUrl}}</div>
-            </div>
-
-            <div class="notice">
-                <p class="notice-text">
-                    <span class="notice-highlight">Important:</span> This verification link is valid for 24 hours.
-                </p>
-            </div>
-
-            <p class="text">
-                If you did not register with the n8n Instance Manager, you can ignore this email. Your account will not be activated unless you confirm the link.
-            </p>
-        </div>
-
-        <div class="footer">
-            <p class="footer-text">&copy; 2025 n8n Instance Manager. All rights reserved.</p>
-        </div>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">n8n Instance Manager</div>
+        <div class="subtitle">Business Edition</div>
     </div>
+
+    <div class="content">
+        <h2 class="greeting">Hello {{username}},</h2>
+
+        <p class="text">
+            Welcome to the n8n Instance Manager!<br/><br/> To activate your account and start with the professional
+            management of your n8n instances, please verify your email address.
+        </p>
+
+        <div class="button-container">
+            <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
+        </div>
+
+        <div class="link-box">
+            <div class="link-label">Or copy this link to your browser:</div>
+            <div class="link-url">{{verificationUrl}}</div>
+        </div>
+
+        <div class="notice">
+            <p class="notice-text">
+                <span class="notice-highlight">Important:</span> This verification link is valid for 24 hours.
+            </p>
+        </div>
+
+        <p class="text">
+            If you did not register with the n8n Instance Manager, you can ignore this email. Your account will not be
+            activated unless you confirm the link.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2025 n8n Instance Manager. All rights reserved.</p>
+    </div>
+</div>
 </body>
 </html>
 

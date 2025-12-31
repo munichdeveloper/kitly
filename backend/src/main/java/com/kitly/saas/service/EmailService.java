@@ -51,7 +51,7 @@ public class EmailService {
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("Bestätigen Sie Ihre E-Mail-Adresse");
+            helper.setSubject("Bestätige deine E-Mail-Adresse");
 
             String verificationUrl = frontendUrl + "/signup/verify-email?token=" + token;
 
@@ -71,5 +71,40 @@ public class EmailService {
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
-}
 
+    public void sendPasswordResetEmail(String toEmail, String token, String username) {
+        sendPasswordResetEmail(toEmail, token, username, defaultLocale, defaultBranding);
+    }
+
+    public void sendPasswordResetEmail(String toEmail, String token, String username, String locale) {
+        sendPasswordResetEmail(toEmail, token, username, locale, defaultBranding);
+    }
+
+    public void sendPasswordResetEmail(String toEmail, String token, String username, String locale, String branding) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Passwort zurücksetzen");
+
+            String resetUrl = frontendUrl + "/reset-password?token=" + token;
+
+            String template = templateService.loadPasswordResetTemplate(locale, branding);
+            String htmlContent = templateService.replacePlaceholders(template, Map.of(
+                    "username", username,
+                    "resetUrl", resetUrl
+            ));
+
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            logger.info("Password reset email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send password reset email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
+}

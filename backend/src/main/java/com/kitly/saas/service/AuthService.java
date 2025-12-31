@@ -5,9 +5,11 @@ import com.kitly.saas.dto.LoginRequest;
 import com.kitly.saas.dto.SignupRequest;
 import com.kitly.saas.dto.TenantRequest;
 import com.kitly.saas.entity.EmailVerificationToken;
+import com.kitly.saas.entity.PasswordResetToken;
 import com.kitly.saas.entity.Role;
 import com.kitly.saas.entity.User;
 import com.kitly.saas.repository.EmailVerificationTokenRepository;
+import com.kitly.saas.repository.PasswordResetTokenRepository;
 import com.kitly.saas.repository.RoleRepository;
 import com.kitly.saas.repository.UserRepository;
 import com.kitly.saas.security.JwtUtil;
@@ -35,6 +37,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final TenantService tenantService;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
 
     @Value("${app.email-verification.enabled:false}")
@@ -43,10 +46,14 @@ public class AuthService {
     @Value("${app.email-verification.token-validity-hours:24}")
     private int tokenValidityHours;
 
+    @Value("${app.password-reset.token-validity-hours:24}")
+    private int passwordResetTokenValidityHours;
+
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                       PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
                       JwtUtil jwtUtil, TenantService tenantService,
                       EmailVerificationTokenRepository emailVerificationTokenRepository,
+                      PasswordResetTokenRepository passwordResetTokenRepository,
                       EmailService emailService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -55,6 +62,7 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
         this.tenantService = tenantService;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
     }
     
@@ -252,5 +260,53 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         
         return new AuthResponse(token, user.getUsername(), user.getEmail());
+    }
+
+    @Transactional
+    public void initiatePasswordReset(String email) {
+        // Benutzer suchen
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Kein Benutzer mit dieser E-Mail-Adresse gefunden"));
+
+        // Alte Tokens für diesen Benutzer löschen
+        passwordResetTokenRepository.deleteByUser(user);
+
+        // Neues Token erstellen
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiryDate = LocalDateTime.now().plusHours(passwordResetTokenValidityHours);
+
+        PasswordResetToken resetToken = new PasswordResetToken(token, user, expiryDate);
+        passwordResetTokenRepository.save(resetToken);
+
+        // E-Mail senden
+        emailService.sendPasswordResetEmail(user.getEmail(), token, user.getUsername());
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        // Token suchen
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Ungültiger oder abgelaufener Reset-Link"));
+
+        // Prüfen ob Token bereits verwendet wurde
+        if (resetToken.isUsed()) {
+            throw new RuntimeException("Dieser Reset-Link wurde bereits verwendet");
+        }
+
+        // Prüfen ob Token abgelaufen ist
+        if (resetToken.isExpired()) {
+            throw new RuntimeException("Dieser Reset-Link ist abgelaufen. Bitte fordere einen neuen an");
+        }
+
+        // Benutzer holen
+        User user = resetToken.getUser();
+
+        // Neues Passwort setzen
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Token als verwendet markieren
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
     }
 }

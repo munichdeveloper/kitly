@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Kitly - E-Mail bestätigen</title>
+    <title>Kitly - Passwort zurücksetzen</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -23,20 +23,20 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>Willkommen bei Kitly!</h1>
+        <h1>Passwort zurücksetzen</h1>
     </div>
     <div class="content">
         <h2>Hallo {{username}},</h2>
-        <p>vielen Dank für deine Registrierung bei Kitly.<br/><br/> Um dein Konto zu aktivieren, bestätige bitte deine
-            E-Mail-Adresse.</p>
-        <p>Klicke auf den folgenden Button, um deine E-Mail-Adresse zu bestätigen:</p>
+        <p>wir haben eine Anfrage erhalten, dein Passwort zurückzusetzen.</p>
+        <p><strong>Falls du diese Anfrage nicht gestellt hast</strong>, kannst du diese E-Mail einfach ignorieren. Dein
+            Passwort bleibt dann unverändert und sicher.</p>
+        <p>Um dein Passwort zurückzusetzen, klicke einfach auf den folgenden Button:</p>
         <center>
-            <a href="{{verificationUrl}}" class="button">E-Mail-Adresse bestätigen</a>
+            <a href="{{resetUrl}}" class="button">Neues Passwort festlegen</a>
         </center>
-        <p>Oder kopiere diesen Link in deinen Browser:</p>
-        <p style="word-break: break-all; color: #4F46E5;">{{verificationUrl}}</p>
-        <p><strong>Dieser Link ist 24 Stunden gültig.</strong></p>
-        <p>Falls du dich nicht bei Kitly registriert hast, kannst du diese E-Mail ignorieren.</p>
+        <p>Alternativ kannst du auch diesen Link in deinen Browser kopieren:</p>
+        <p style="word-break: break-all; color: #4F46E5;">{{resetUrl}}</p>
+        <p><strong>Wichtig:</strong> Dieser Link ist aus Sicherheitsgründen nur 24 Stunden gültig.</p>
     </div>
     <div class="footer">
         <p>&copy; 2025 Kitly. Alle Rechte vorbehalten.</p>
@@ -44,4 +44,3 @@
 </div>
 </body>
 </html>
-

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>n8n Instance Manager - Verify E-Mail</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
@@ -20,26 +21,27 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Welcome to Kitly!</h1>
-        </div>
-        <div class="content">
-            <h2>Hello {{username}},</h2>
-            <p>Thank you for registering with Kitly.<br /><br /> To activate your account, please verify your email address.</p>
-            <p>Click the following button to verify your email address:</p>
-            <center>
-                <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
-            </center>
-            <p>Or copy this link to your browser:</p>
-            <p style="word-break: break-all; color: #4F46E5;">{{verificationUrl}}</p>
-            <p><strong>This link is valid for 24 hours.</strong></p>
-            <p>If you did not register with Kitly, you can ignore this email.</p>
-        </div>
-        <div class="footer">
-            <p>&copy; 2025 Kitly. All rights reserved.</p>
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>Welcome to Kitly!</h1>
     </div>
+    <div class="content">
+        <h2>Hello {{username}},</h2>
+        <p>Thank you for registering with Kitly.<br/><br/> To activate your account, please verify your email address.
+        </p>
+        <p>Click the following button to verify your email address:</p>
+        <center>
+            <a href="{{verificationUrl}}" class="button">Verify Email Address</a>
+        </center>
+        <p>Or copy this link to your browser:</p>
+        <p style="word-break: break-all; color: #4F46E5;">{{verificationUrl}}</p>
+        <p><strong>This link is valid for 24 hours.</strong></p>
+        <p>If you did not register with Kitly, you can ignore this email.</p>
+    </div>
+    <div class="footer">
+        <p>&copy; 2025 Kitly. All rights reserved.</p>
+    </div>
+</div>
 </body>
 </html>
 

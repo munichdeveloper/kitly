@@ -23,6 +23,7 @@ public class EmailTemplateService {
 
     // Hart verdrahtete Template-Typen für Business-Logik
     private static final String VERIFICATION_TEMPLATE = "verification";
+    private static final String PASSWORD_RESET_TEMPLATE = "password-reset";
 
     /**
      * Lädt ein E-Mail-Template basierend auf Locale, Branding und Template-Typ.
@@ -97,6 +98,36 @@ public class EmailTemplateService {
     }
 
     /**
+     * Lädt das Password-Reset-E-Mail-Template.
+     *
+     * @param locale   Die Locale
+     * @param branding Das Branding
+     * @return Der Template-Inhalt
+     */
+    public String loadPasswordResetTemplate(String locale, String branding) {
+        return loadTemplate(locale, branding, PASSWORD_RESET_TEMPLATE);
+    }
+
+    /**
+     * Lädt das Password-Reset-E-Mail-Template mit Standard-Branding.
+     *
+     * @param locale Die Locale
+     * @return Der Template-Inhalt
+     */
+    public String loadPasswordResetTemplate(String locale) {
+        return loadPasswordResetTemplate(locale, defaultBranding);
+    }
+
+    /**
+     * Lädt das Password-Reset-E-Mail-Template mit Standard-Locale und Standard-Branding.
+     *
+     * @return Der Template-Inhalt
+     */
+    public String loadPasswordResetTemplate() {
+        return loadPasswordResetTemplate(defaultLocale, defaultBranding);
+    }
+
+    /**
      * Ersetzt Platzhalter im Template mit tatsächlichen Werten.
      *
      * @param template     Das Template mit Platzhaltern
@@ -112,4 +143,3 @@ public class EmailTemplateService {
         return result;
     }
 }
-
