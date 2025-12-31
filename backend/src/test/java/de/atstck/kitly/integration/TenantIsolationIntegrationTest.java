@@ -7,10 +7,12 @@ import de.atstck.kitly.entity.User;
 import de.atstck.kitly.integration.builder.MembershipTestBuilder;
 import de.atstck.kitly.integration.builder.TenantTestBuilder;
 import de.atstck.kitly.integration.builder.UserTestBuilder;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,8 +36,10 @@ public class TenantIsolationIntegrationTest extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Clean up data
+        // Clean up data in correct order (respecting foreign key constraints)
         membershipRepository.deleteAll();
+        subscriptionRepository.deleteAll();
+        invitationRepository.deleteAll();
         tenantRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -93,7 +97,18 @@ public class TenantIsolationIntegrationTest extends BaseIntegrationTest {
         membershipRepository.save(membership2);
     }
 
+    @AfterEach
+    void tearDown() {
+        // Clean up after each test
+        membershipRepository.deleteAll();
+        subscriptionRepository.deleteAll();
+        invitationRepository.deleteAll();
+        tenantRepository.deleteAll();
+        userRepository.deleteAll();
+    }
+
     @Test
+    @Transactional
     void whenUserQueriesTenant_thenOnlySeesOwnTenants() {
         // When - Get user1's memberships
         List<Membership> user1Memberships = membershipRepository.findByUserId(user1.getId());

@@ -124,8 +124,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         );
 
         // Then - Verify seats are full
-        assertThat(activeCount).isEqualTo(3);
-        assertThat(activeCount).isEqualTo(subscription.getMaxSeats());
+        assertThat(activeCount).isEqualTo(subscription.getMaxSeats().longValue());
         assertThat(activeCount >= subscription.getMaxSeats()).isTrue(); // Seats are full
     }
 
@@ -231,11 +230,13 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
     void whenDifferentPlans_thenDifferentSeatLimits() {
         // Test different plan seat limits
 
-        // FREE plan - 3 seats
+        // FREE plan - 3 seats (maxSeats wird automatisch durch @PrePersist gesetzt)
         Subscription freeSub = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
                 .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withMaxSeats(null) // Wichtig: null setzen, damit @PrePersist die Default-Werte setzt
                 .build();
+        freeSub = subscriptionRepository.save(freeSub); // Speichern, um @PrePersist auszulösen
         assertThat(freeSub.getMaxSeats()).isEqualTo(3);
 
         // Create a new tenant for STARTER plan
@@ -253,11 +254,13 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
                 .build();
         tenant2 = tenantRepository.save(tenant2);
 
-        // STARTER plan - 10 seats
+        // STARTER plan - 10 seats (maxSeats wird automatisch durch @PrePersist gesetzt)
         Subscription starterSub = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant2)
                 .withPlan(Subscription.SubscriptionPlan.STARTER)
+                .withMaxSeats(null) // Wichtig: null setzen, damit @PrePersist die Default-Werte setzt
                 .build();
+        starterSub = subscriptionRepository.save(starterSub); // Speichern, um @PrePersist auszulösen
         assertThat(starterSub.getMaxSeats()).isEqualTo(10);
     }
 }

@@ -112,7 +112,7 @@ class WebhookProcessorTest {
         )));
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("data", subscriptionData);
+        payload.put("data", Map.of("object", subscriptionData));
 
         WebhookInbox webhook = WebhookInbox.builder()
                 .id(UUID.randomUUID())
@@ -138,7 +138,7 @@ class WebhookProcessorTest {
 
         // Then: Should save subscription and bump entitlements
         verify(subscriptionRepository, times(1)).save(any(Subscription.class));
-        verify(entitlementService, times(1)).bumpEntitlementVersion(testTenantId);
+        verify(entitlementService, times(1)).syncEntitlements(testTenantId);
         verify(outboxService, times(1))
                 .publish(eq("EntitlementsChanged"), eq("Tenant"), eq(testTenantId), any());
     }
@@ -158,11 +158,11 @@ class WebhookProcessorTest {
         subscriptionData.put("status", "active");
         subscriptionData.put("metadata", Map.of("tenant_id", testTenantId.toString()));
         subscriptionData.put("items", Map.of("data", List.of(
-                Map.of("price", Map.of("metadata", Map.of("plan", "professional")))
+                Map.of("price", Map.of("metadata", Map.of("plan", "business")))
         )));
 
         Map<String, Object> payload = new HashMap<>();
-        payload.put("data", subscriptionData);
+        payload.put("data", Map.of("object", subscriptionData));
 
         WebhookInbox webhook = WebhookInbox.builder()
                 .id(UUID.randomUUID())
@@ -193,7 +193,7 @@ class WebhookProcessorTest {
         Subscription savedSubscription = subscriptionCaptor.getValue();
         assertEquals(Subscription.SubscriptionPlan.BUSINESS, savedSubscription.getPlan());
 
-        verify(entitlementService, times(1)).bumpEntitlementVersion(testTenantId);
+        verify(entitlementService, times(1)).syncEntitlements(testTenantId);
         verify(outboxService, times(1))
                 .publish(eq("EntitlementsChanged"), eq("Tenant"), eq(testTenantId), any());
     }

@@ -53,7 +53,7 @@ class EntitlementControllerTest {
         assertNotNull(catalog);
         assertEquals(3, catalog.size());
         assertTrue(catalog.containsKey("starter"));
-        assertTrue(catalog.containsKey("pro"));
+        assertTrue(catalog.containsKey("business"));
         assertTrue(catalog.containsKey("enterprise"));
     }
     

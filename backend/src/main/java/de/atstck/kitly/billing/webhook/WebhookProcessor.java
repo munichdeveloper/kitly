@@ -207,6 +207,8 @@ public class WebhookProcessor {
                 Map<String, Object> firstItem = dataItems.get(0);
                 Map<String, Object> price = (Map<String, Object>) firstItem.get("price");
                 if (price != null) {
+                    boolean planSetByPriceId = false;
+
                     // Try to match by Price ID first
                     String priceId = (String) price.get("id");
                     if (priceId != null) {
@@ -214,14 +216,15 @@ public class WebhookProcessor {
                         if (planName != null) {
                             try {
                                 subscription.setPlan(Subscription.SubscriptionPlan.valueOf(planName));
+                                planSetByPriceId = true;
                             } catch (IllegalArgumentException e) {
                                 logger.warn("Unknown plan name from price ID: {}", planName);
                             }
                         }
                     }
 
-                    // Fallback to metadata if plan not set by ID
-                    if (subscription.getPlan() == Subscription.SubscriptionPlan.FREE) {
+                    // Fallback to metadata if plan was not set by ID
+                    if (!planSetByPriceId) {
                         Map<String, Object> priceMetadata = (Map<String, Object>) price.get("metadata");
                         if (priceMetadata != null && priceMetadata.containsKey("plan")) {
                             String planName = (String) priceMetadata.get("plan");

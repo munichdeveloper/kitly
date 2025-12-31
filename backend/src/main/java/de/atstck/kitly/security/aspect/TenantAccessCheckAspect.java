@@ -21,7 +21,7 @@ import java.util.UUID;
 @Component
 public class TenantAccessCheckAspect {
     
-    @Before("@annotation(com.kitly.saas.security.annotation.TenantAccessCheck)")
+    @Before("@annotation(de.atstck.kitly.security.annotation.TenantAccessCheck)")
     public void checkTenantAccess(JoinPoint joinPoint) {
         UUID contextTenantId = TenantContextHolder.getTenantId();
         

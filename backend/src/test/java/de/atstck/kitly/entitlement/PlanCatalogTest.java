@@ -24,13 +24,13 @@ class PlanCatalogTest {
     }
     
     @Test
-    void testGetPlan_Pro() {
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan("pro");
-        
+    void testGetPlan_Business() {
+        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan("business");
+
         assertNotNull(plan);
-        assertEquals("pro", plan.getCode());
-        assertEquals("Professional", plan.getName());
-        
+        assertEquals("business", plan.getCode());
+        assertEquals("Business", plan.getName());
+
         Map<String, String> entitlements = plan.getEntitlements();
         assertNotNull(entitlements);
         assertEquals("true", entitlements.get("features.ai_assistant"));
@@ -55,16 +55,16 @@ class PlanCatalogTest {
     
     @Test
     void testGetPlan_CaseInsensitive() {
-        PlanCatalog.PlanDefinition plan1 = PlanCatalog.getPlan("PRO");
-        PlanCatalog.PlanDefinition plan2 = PlanCatalog.getPlan("Pro");
-        PlanCatalog.PlanDefinition plan3 = PlanCatalog.getPlan("pro");
-        
+        PlanCatalog.PlanDefinition plan1 = PlanCatalog.getPlan("BUSINESS");
+        PlanCatalog.PlanDefinition plan2 = PlanCatalog.getPlan("Business");
+        PlanCatalog.PlanDefinition plan3 = PlanCatalog.getPlan("business");
+
         assertNotNull(plan1);
         assertNotNull(plan2);
         assertNotNull(plan3);
-        assertEquals("pro", plan1.getCode());
-        assertEquals("pro", plan2.getCode());
-        assertEquals("pro", plan3.getCode());
+        assertEquals("business", plan1.getCode());
+        assertEquals("business", plan2.getCode());
+        assertEquals("business", plan3.getCode());
     }
     
     @Test
@@ -88,7 +88,7 @@ class PlanCatalogTest {
         assertNotNull(plans);
         assertEquals(3, plans.size());
         assertTrue(plans.containsKey("starter"));
-        assertTrue(plans.containsKey("pro"));
+        assertTrue(plans.containsKey("business"));
         assertTrue(plans.containsKey("enterprise"));
     }
     
@@ -107,7 +107,7 @@ class PlanCatalogTest {
     @Test
     void testPlanExists() {
         assertTrue(PlanCatalog.planExists("starter"));
-        assertTrue(PlanCatalog.planExists("pro"));
+        assertTrue(PlanCatalog.planExists("business"));
         assertTrue(PlanCatalog.planExists("enterprise"));
         assertTrue(PlanCatalog.planExists("STARTER"));
         
@@ -117,7 +117,7 @@ class PlanCatalogTest {
     
     @Test
     void testPlanEntitlementsAreUnmodifiable() {
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan("pro");
+        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan("business");
         Map<String, String> entitlements = plan.getEntitlements();
         
         assertThrows(UnsupportedOperationException.class, () -> {

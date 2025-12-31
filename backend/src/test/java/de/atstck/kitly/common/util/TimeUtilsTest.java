@@ -12,12 +12,14 @@ class TimeUtilsTest {
     
     @Test
     void testNowUtc() {
+        LocalDateTime before = LocalDateTime.now(ZoneOffset.UTC);
         LocalDateTime now = TimeUtils.nowUtc();
-        
+        LocalDateTime after = LocalDateTime.now(ZoneOffset.UTC);
+
         assertNotNull(now);
-        // Verify it's approximately the current time (within 1 second)
-        assertTrue(now.isBefore(LocalDateTime.now().plusSeconds(1)));
-        assertTrue(now.isAfter(LocalDateTime.now().minusSeconds(1)));
+        // Verify it's approximately the current time (within the test execution window)
+        assertFalse(now.isBefore(before), "now should not be before the test started");
+        assertFalse(now.isAfter(after), "now should not be after the test ended");
     }
     
     @Test
