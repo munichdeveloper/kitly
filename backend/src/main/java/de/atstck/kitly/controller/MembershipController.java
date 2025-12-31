@@ -1,0 +1,44 @@
+package de.atstck.kitly.controller;
+
+import de.atstck.kitly.dto.MembershipResponse;
+import de.atstck.kitly.dto.UpdateMemberRequest;
+import de.atstck.kitly.security.annotation.TenantAccessCheck;
+import de.atstck.kitly.service.MembershipService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/tenants/{tenantId}/members")
+public class MembershipController {
+    
+    private final MembershipService membershipService;
+    
+    public MembershipController(MembershipService membershipService) {
+        this.membershipService = membershipService;
+    }
+    
+    @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'MEMBER')")
+    @TenantAccessCheck
+    public ResponseEntity<List<MembershipResponse>> getTenantMembers(@PathVariable UUID tenantId) {
+        List<MembershipResponse> members = membershipService.getTenantMembers(tenantId);
+        return ResponseEntity.ok(members);
+    }
+    
+    @PatchMapping("/{userId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @TenantAccessCheck
+    public ResponseEntity<MembershipResponse> updateMember(@PathVariable UUID tenantId,
+                                                           @PathVariable UUID userId,
+                                                           @Valid @RequestBody UpdateMemberRequest request,
+                                                           Authentication authentication) {
+        MembershipResponse member = membershipService.updateMember(tenantId, userId, request, authentication.getName());
+        return ResponseEntity.ok(member);
+    }
+}
