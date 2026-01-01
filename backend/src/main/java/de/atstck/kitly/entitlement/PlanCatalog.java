@@ -5,7 +5,14 @@ import java.util.*;
 /**
  * Static catalog of subscription plans and their entitlements.
  * Plans define feature flags, limits, and quotas for tenants.
+ *
+ * NOTE: This is a FALLBACK catalog. The system should preferably use the dynamic
+ * plan configuration from the database (PlanEntity, EntitlementDefinition).
+ * This catalog is maintained for backward compatibility and as a default fallback.
+ *
+ * @deprecated Use PlanService for dynamic plan management instead
  */
+@Deprecated
 public class PlanCatalog {
     
     private static final Map<String, PlanDefinition> PLANS = new HashMap<>();
@@ -28,7 +35,7 @@ public class PlanCatalog {
                 .name("Business")
                 .entitlements(Map.of(
                     "features.ai_assistant", "true",
-                    "app.nim.access", "true",
+                    "app_access.nim", "true",
                     "limits.projects", "100",
                     "limits.api_calls_per_month", "10000"
                 ))
@@ -40,7 +47,7 @@ public class PlanCatalog {
                 .name("Enterprise")
                 .entitlements(Map.of(
                     "features.ai_assistant", "true",
-                    "app.nim.access", "true",
+                    "app_access.nim", "true",
                     "limits.projects", "unlimited",
                     "limits.api_calls_per_month", "unlimited"
                 ))

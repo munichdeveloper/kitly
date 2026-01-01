@@ -104,7 +104,7 @@ class EntitlementServiceTest {
         assertTrue(items.stream().anyMatch(item -> 
                 "features.ai_assistant".equals(item.getKey()) && "true".equals(item.getValue())));
         assertTrue(items.stream().anyMatch(item ->
-                "app.nim.access".equals(item.getKey()) && "true".equals(item.getValue())));
+                "app_access.nim".equals(item.getKey()) && "true".equals(item.getValue())));
         assertTrue(items.stream().anyMatch(item ->
                 "limits.projects".equals(item.getKey()) && "100".equals(item.getValue())));
         assertTrue(items.stream().anyMatch(item -> 
