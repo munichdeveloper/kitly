@@ -81,6 +81,22 @@ export class ApiClient {
     };
   }
 
+  private static handleUnauthorized(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Token und Cookie entfernen
+    localStorage.removeItem('token');
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+
+    // Event auslösen, damit Auth-Context reagieren kann
+    window.dispatchEvent(new CustomEvent('unauthorized'));
+
+    // Zur Login-Seite weiterleiten
+    window.location.href = '/auth/login';
+  }
+
   private static async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       let errorMessage = `Request failed with status ${response.status}`;
@@ -94,6 +110,11 @@ export class ApiClient {
         errorMessage = response.statusText || errorMessage;
       }
       
+      // Bei 403 Forbidden: Benutzer ausloggen und zur Login-Seite weiterleiten
+      if (response.status === 403) {
+        this.handleUnauthorized();
+      }
+
       throw new ApiError(response.status, errorMessage, errorData);
     }
     
