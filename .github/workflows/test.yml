@@ -20,9 +20,14 @@ jobs:
         distribution: 'temurin'
         cache: 'maven'
     
+    - name: Clean Maven Cache (Lombok fix)
+      working-directory: ./backend
+      run: mvn dependency:purge-local-repository -DactTransitively=false -DreResolve=false
+      continue-on-error: true
+    
     - name: Build Backend
       working-directory: ./backend
-      run: mvn clean package -DskipTests
+      run: mvn clean install -DskipTests
     
     - name: Run Backend Linting
       working-directory: ./backend
