@@ -1,7 +1,6 @@
-package com.kitly.saas.entitlement;
+package de.atstck.kitly.entitlement;
 
 import java.util.*;
-
 /**
  * Static catalog of subscription plans and their entitlements.
  * Plans define feature flags, limits, and quotas for tenants.
