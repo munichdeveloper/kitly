@@ -18,10 +18,15 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+
+    - name: Clean Maven Cache
+      working-directory: ./backend
+      run: mvn dependency:purge-local-repository -DactTransitively=false -DreResolve=false
+      continue-on-error: true
     
     - name: Build Backend
       working-directory: ./backend
-      run: mvn clean install -DskipTests
+      run: mvn clean package -DskipTests
     
     - name: Run Backend Tests
       working-directory: ./backend

@@ -21,12 +21,17 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+
+    - name: Clean Maven Cache
+      working-directory: ./backend
+      run: mvn dependency:purge-local-repository -DactTransitively=false -DreResolve=false
+      continue-on-error: true
     
     - name: Build Backend
       if: matrix.component == 'backend'
       working-directory: ./backend
       run: |
-        mvn clean package -DskipTests
+        mvn clean install -DskipTests
     
     - name: Set up Node.js (Frontend)
       if: matrix.component == 'frontend'
