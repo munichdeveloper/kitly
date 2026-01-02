@@ -33,6 +33,11 @@ public interface PlanRepository extends JpaRepository<PlanEntity, UUID> {
     List<PlanEntity> findByIsActiveTrueOrderByDisplayOrderAsc();
 
     /**
+     * Find all plans (including inactive) ordered by display order
+     */
+    List<PlanEntity> findAllByOrderByDisplayOrderAsc();
+
+    /**
      * Find all plans with their entitlements eagerly loaded
      */
     @Query("SELECT DISTINCT p FROM PlanEntity p LEFT JOIN FETCH p.entitlements WHERE p.code = :code")

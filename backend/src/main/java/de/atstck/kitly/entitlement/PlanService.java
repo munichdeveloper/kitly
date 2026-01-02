@@ -85,6 +85,14 @@ public class PlanService {
     }
 
     /**
+     * Get all plans (including inactive) - for admin use
+     */
+    @Transactional(readOnly = true)
+    public List<PlanEntity> getAllPlans() {
+        return planRepository.findAllByOrderByDisplayOrderAsc();
+    }
+
+    /**
      * Create a new plan
      */
     @Transactional
@@ -175,6 +183,20 @@ public class PlanService {
                 pe.getEntitlementDefinition().getId().equals(definition.getId()));
 
         planRepository.save(plan);
+    }
+
+    /**
+     * Delete a plan
+     */
+    @Transactional
+    public void deletePlan(UUID planId) {
+        PlanEntity plan = planRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan not found"));
+
+        log.info("Deleting plan: {} ({})", plan.getName(), plan.getCode());
+
+        // The cascade will automatically delete all associated entitlements
+        planRepository.delete(plan);
     }
 
     /**

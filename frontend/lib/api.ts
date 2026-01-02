@@ -103,10 +103,15 @@ export class ApiClient {
       let errorData;
       
       try {
-        errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        const text = await response.text();
+        try {
+          errorData = JSON.parse(text);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON, use the text or status text
+          errorMessage = text || response.statusText || errorMessage;
+        }
       } catch {
-        // If response is not JSON, use status text
         errorMessage = response.statusText || errorMessage;
       }
       
@@ -123,7 +128,17 @@ export class ApiClient {
       return {} as T;
     }
     
-    return response.json();
+    // Try to parse JSON response
+    try {
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        return {} as T;
+      }
+      return JSON.parse(text);
+    } catch (error) {
+      console.error('Failed to parse JSON response:', error);
+      throw new ApiError(500, 'Invalid JSON response from server', error);
+    }
   }
 
   // ========== Auth APIs ==========
@@ -462,5 +477,44 @@ export class ApiClient {
   static async checkHealth(): Promise<{ status: string; application: string }> {
     const response = await fetch(`${API_BASE_URL}/health`);
     return this.handleResponse<{ status: string; application: string }>(response);
+  }
+
+  // ========== Generic HTTP Methods ==========
+  static async get<T>(path: string): Promise<T> {
+    const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  static async post<T>(path: string, data?: any): Promise<T> {
+    const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  static async put<T>(path: string, data?: any): Promise<T> {
+    const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: this.getAuthHeader(),
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return this.handleResponse<T>(response);
+  }
+
+  static async delete<T>(path: string): Promise<T> {
+    const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<T>(response);
   }
 }

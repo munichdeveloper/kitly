@@ -4,9 +4,10 @@ interface CardProps {
   children: React.ReactNode;
   className?: string;
   variant?: 'default' | 'gradient' | 'glass';
+  onClick?: () => void;
 }
 
-export default function Card({ children, className = '', variant = 'default' }: CardProps) {
+export default function Card({ children, className = '', variant = 'default', onClick }: CardProps) {
   const baseStyles = 'rounded-xl p-6 transition-all duration-300';
 
   const variantStyles = {
@@ -16,7 +17,10 @@ export default function Card({ children, className = '', variant = 'default' }: 
   };
 
   return (
-    <div className={`${baseStyles} ${variantStyles[variant]} ${className}`}>
+    <div
+      className={`${baseStyles} ${variantStyles[variant]} ${className}`}
+      onClick={onClick}
+    >
       {children}
     </div>
   );

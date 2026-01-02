@@ -1,8 +1,8 @@
 package de.atstck.kitly.entitlement.controller;
 
-import de.atstck.kitly.entity.PlanEntity;
-import de.atstck.kitly.entitlement.PlanService;
 import de.atstck.kitly.entitlement.EntitlementType;
+import de.atstck.kitly.entitlement.PlanService;
+import de.atstck.kitly.entity.PlanEntity;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,9 +35,9 @@ public class PlanManagementController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all active plans")
+    @Operation(summary = "Get all plans (including inactive for admins)")
     public ResponseEntity<List<PlanEntity>> getAllPlans() {
-        return ResponseEntity.ok(planService.getActivePlans());
+        return ResponseEntity.ok(planService.getAllPlans());
     }
 
     @GetMapping("/{planCode}")
@@ -98,6 +98,13 @@ public class PlanManagementController {
             @RequestParam EntitlementType type,
             @RequestParam String name) {
         planService.removeEntitlement(planCode, type, name);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{planId}")
+    @Operation(summary = "Delete a plan")
+    public ResponseEntity<Void> deletePlan(@PathVariable UUID planId) {
+        planService.deletePlan(planId);
         return ResponseEntity.ok().build();
     }
 
