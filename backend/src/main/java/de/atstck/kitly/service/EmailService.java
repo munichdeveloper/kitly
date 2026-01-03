@@ -26,6 +26,9 @@ public class EmailService {
     @Value("${app.frontend-app-url}")
     private String frontendAppUrl;
 
+    @Value("${app.docs-url:https://docs.kitly.com}")
+    private String docsUrl;
+
     @Value("${app.email.locale:de_DE}")
     private String defaultLocale;
 
@@ -108,6 +111,42 @@ public class EmailService {
         } catch (MessagingException e) {
             log.error("Failed to send password reset email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
+
+    public void sendOnboardingEmail(String toEmail, String username, String planName) {
+        sendOnboardingEmail(toEmail, username, planName, defaultLocale, defaultBranding);
+    }
+
+    public void sendOnboardingEmail(String toEmail, String username, String planName, String locale) {
+        sendOnboardingEmail(toEmail, username, planName, locale, defaultBranding);
+    }
+
+    public void sendOnboardingEmail(String toEmail, String username, String planName, String locale, String branding) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Willkommen - Dein Konto ist aktiv!");
+
+            String template = templateService.loadOnboardingTemplate(locale, branding);
+            String htmlContent = templateService.replacePlaceholders(template, Map.of(
+                    "username", username,
+                    "planName", planName,
+                    "appUrl", frontendAppUrl,
+                    "docsUrl", docsUrl
+            ));
+
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+            log.info("Onboarding email sent to: {} (locale: {}, branding: {}, plan: {})", toEmail, locale, branding, planName);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send onboarding email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send onboarding email", e);
         }
     }
 }

@@ -24,6 +24,7 @@ public class EmailTemplateService {
     // Hart verdrahtete Template-Typen für Business-Logik
     private static final String VERIFICATION_TEMPLATE = "verification";
     private static final String PASSWORD_RESET_TEMPLATE = "password-reset";
+    private static final String ONBOARDING_TEMPLATE = "onboarding";
 
     /**
      * Lädt ein E-Mail-Template basierend auf Locale, Branding und Template-Typ.
@@ -125,6 +126,36 @@ public class EmailTemplateService {
      */
     public String loadPasswordResetTemplate() {
         return loadPasswordResetTemplate(defaultLocale, defaultBranding);
+    }
+
+    /**
+     * Lädt das Onboarding-E-Mail-Template.
+     *
+     * @param locale   Die Locale
+     * @param branding Das Branding
+     * @return Der Template-Inhalt
+     */
+    public String loadOnboardingTemplate(String locale, String branding) {
+        return loadTemplate(locale, branding, ONBOARDING_TEMPLATE);
+    }
+
+    /**
+     * Lädt das Onboarding-E-Mail-Template mit Standard-Branding.
+     *
+     * @param locale Die Locale
+     * @return Der Template-Inhalt
+     */
+    public String loadOnboardingTemplate(String locale) {
+        return loadOnboardingTemplate(locale, defaultBranding);
+    }
+
+    /**
+     * Lädt das Onboarding-E-Mail-Template mit Standard-Locale und Standard-Branding.
+     *
+     * @return Der Template-Inhalt
+     */
+    public String loadOnboardingTemplate() {
+        return loadOnboardingTemplate(defaultLocale, defaultBranding);
     }
 
     /**

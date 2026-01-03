@@ -11,6 +11,7 @@ import de.atstck.kitly.repository.InvoiceRepository;
 import de.atstck.kitly.repository.SubscriptionRepository;
 import de.atstck.kitly.repository.TenantRepository;
 import de.atstck.kitly.repository.WebhookInboxRepository;
+import de.atstck.kitly.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -55,6 +56,7 @@ public class WebhookProcessor {
     private final EntitlementService entitlementService;
     private final OutboxService outboxService;
     private final StripeConfig stripeConfig;
+    private final EmailService emailService;
 
     public WebhookProcessor(
             WebhookInboxRepository webhookInboxRepository,
@@ -63,7 +65,8 @@ public class WebhookProcessor {
             InvoiceRepository invoiceRepository,
             EntitlementService entitlementService,
             OutboxService outboxService,
-            StripeConfig stripeConfig) {
+            StripeConfig stripeConfig,
+            EmailService emailService) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
@@ -71,6 +74,7 @@ public class WebhookProcessor {
         this.entitlementService = entitlementService;
         this.outboxService = outboxService;
         this.stripeConfig = stripeConfig;
+        this.emailService = emailService;
     }
     
     /**
@@ -196,7 +200,8 @@ public class WebhookProcessor {
             return newSub;
         });
         
-        // Update subscription status
+        // Update subscription details
+        subscription.setStripeSubscriptionId(stripeSubscriptionId);
         subscription.setStatus(mapStripeStatus(status));
         
         // Extract plan details from metadata or items
@@ -272,9 +277,16 @@ public class WebhookProcessor {
         String subscriptionId = (String) sessionData.get("subscription");
         if (subscriptionId != null) {
             logger.info("Checkout session completed for subscription: {}", subscriptionId);
-            // We could fetch the subscription from Stripe here to be sure,
-            // but usually customer.subscription.created/updated events follow this.
-            // For now, we'll rely on those events, but logging this helps debugging.
+
+            // Sende Onboarding-E-Mail nach erfolgreichem Checkout
+            Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
+            if (subscriptionOpt.isPresent()) {
+                Subscription subscription = subscriptionOpt.get();
+                logger.info("Sending onboarding email for subscription: {}", subscriptionId);
+                sendOnboardingEmail(subscription);
+            } else {
+                logger.warn("Subscription not found for checkout session: {}", subscriptionId);
+            }
         }
     }
 
@@ -361,5 +373,28 @@ public class WebhookProcessor {
             case "enterprise" -> Subscription.SubscriptionPlan.ENTERPRISE;
             default -> Subscription.SubscriptionPlan.FREE;
         };
+    }
+
+    /**
+     * Sendet eine Onboarding-E-Mail an den Tenant-Owner nach erfolgreicher Zahlung
+     */
+    private void sendOnboardingEmail(Subscription subscription) {
+        try {
+            Tenant tenant = subscription.getTenant();
+            if (tenant.getOwner() == null) {
+                logger.warn("Tenant {} has no owner, cannot send onboarding email", tenant.getId());
+                return;
+            }
+
+            String ownerEmail = tenant.getOwner().getEmail();
+            String ownerUsername = tenant.getOwner().getUsername();
+            String planName = subscription.getPlan() != null ? subscription.getPlan().name() : "Unknown";
+
+            emailService.sendOnboardingEmail(ownerEmail, ownerUsername, planName);
+            logger.info("Onboarding email sent to {} for tenant {}", ownerEmail, tenant.getId());
+        } catch (Exception e) {
+            logger.error("Failed to send onboarding email for tenant {}", subscription.getTenant().getId(), e);
+            // Wir werfen keine Exception, um die Webhook-Verarbeitung nicht zu unterbrechen
+        }
     }
 }
