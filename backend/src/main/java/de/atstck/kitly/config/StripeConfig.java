@@ -75,19 +75,23 @@ public class StripeConfig {
         }
 
         try {
-            // Get all settings that match the pattern stripe.{mode}.plan.*
-            String prefix = "stripe." + mode + ".plan.";
+            // Get all settings that match the pattern stripe.plan.*
+            // Key format: stripe.plan.{PLAN_NAME}
+            String prefix = "stripe.plan.";
 
-            // Try to get all common plan names
-            String[] possiblePlans = {"STARTER", "BUSINESS", "ENTERPRISE", "FREE", "BASIC", "PRO", "PREMIUM"};
+            Map<String, String> settings = platformSettingService.getSettingsValuesByPrefix(prefix);
 
-            for (String planName : possiblePlans) {
-                String settingKey = prefix + planName;
-                String priceId = platformSettingService.getSettingValue(settingKey, null);
+            for (Map.Entry<String, String> entry : settings.entrySet()) {
+                String key = entry.getKey();
+                String priceId = entry.getValue();
 
-                if (priceId != null && !priceId.isEmpty()) {
-                    planPriceMap.put(planName.toUpperCase(), priceId);
-                    log.debug("Loaded dynamic plan price: {} -> {}", planName, priceId);
+                // Extract plan name from key: stripe.plan.{PLAN_NAME}
+                if (key.length() > prefix.length()) {
+                    String planName = key.substring(prefix.length());
+                    if (priceId != null && !priceId.isEmpty()) {
+                        planPriceMap.put(planName.toUpperCase(), priceId);
+                        log.debug("Loaded dynamic plan price: {} -> {}", planName, priceId);
+                    }
                 }
             }
         } catch (Exception e) {

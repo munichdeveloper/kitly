@@ -114,7 +114,7 @@ export default function PlatformAdminPage() {
     if (newMode === 'live') {
       const liveApiKey = settings.find(s => s.key === 'stripe.live.api_key');
       const liveWebhookSecret = settings.find(s => s.key === 'stripe.live.webhook_secret');
-      const livePlans = settings.filter(s => s.key.startsWith('stripe.live.plan.') && s.value);
+      const plans = settings.filter(s => s.key.startsWith('stripe.plan.') && s.value);
 
       if (!liveApiKey || !liveApiKey.value) {
         showToast('Live Mode API Key is not configured. Please configure it first in the plan settings.', 'error');
@@ -128,8 +128,8 @@ export default function PlatformAdminPage() {
         return;
       }
 
-      if (livePlans.length === 0) {
-        showToast('At least one plan must be configured for Live Mode. Please add a plan first.', 'error');
+      if (plans.length === 0) {
+        showToast('At least one plan must be configured. Please add a plan first.', 'error');
         setValidationErrors({ livePlans: true });
         return;
       }
@@ -245,13 +245,13 @@ export default function PlatformAdminPage() {
       }
 
       const mode = settingsMode;
-      const planKey = `stripe.${mode}.plan.${newPlan.name.toUpperCase()}`;
+      const planKey = `stripe.plan.${newPlan.name.toUpperCase()}`;
 
       await ApiClient.createPlatformSetting({
         key: planKey,
         value: newPlan.priceId,
         type: 'STRING',
-        description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
+        description: `Stripe Price ID for ${newPlan.name.toUpperCase()} plan`,
       });
 
       showToast('Plan added successfully', 'success');
@@ -355,7 +355,7 @@ export default function PlatformAdminPage() {
 
       // 3. Check for New Plan
       if (newPlan.name && newPlan.priceId) {
-        const planKey = `stripe.${mode}.plan.${newPlan.name.toUpperCase()}`;
+        const planKey = `stripe.plan.${newPlan.name.toUpperCase()}`;
         // Check if this plan already exists in updates (unlikely but good safety) or settings
         const planExists = settings.some(s => s.key === planKey);
 
@@ -364,7 +364,7 @@ export default function PlatformAdminPage() {
             key: planKey,
             value: newPlan.priceId,
             type: 'STRING',
-            description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
+            description: `Stripe Price ID for ${newPlan.name.toUpperCase()} plan`,
           });
         }
       }

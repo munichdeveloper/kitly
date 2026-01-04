@@ -60,6 +60,7 @@ export default function PlanDetailPage() {
     isActive: true,
     displayOrder: 0,
   });
+  const [stripePriceId, setStripePriceId] = useState('');
 
 
   const [showAddEntitlementModal, setShowAddEntitlementModal] = useState(false);
@@ -97,6 +98,15 @@ export default function PlanDetailPage() {
         isActive: planData.isActive,
         displayOrder: planData.displayOrder || 0,
       });
+
+      // Load Stripe Price ID
+      try {
+        const priceIdSetting = await ApiClient.getPlatformSetting(`stripe.plan.${planCode}`);
+        setStripePriceId(priceIdSetting.value);
+      } catch (e) {
+        setStripePriceId('');
+      }
+
     } catch (err: any) {
       console.error('Error loading plan:', err);
       showToast(err.message || 'Failed to load plan details', 'error');
@@ -113,6 +123,31 @@ export default function PlanDetailPage() {
     try {
       setSaving(true);
       await ApiClient.put(`/admin/plans/${plan.id}`, formData);
+
+      // Save Stripe Price ID
+      try {
+        const key = `stripe.plan.${planCode}`;
+        if (stripePriceId) {
+          await ApiClient.createPlatformSetting({
+            key,
+            value: stripePriceId,
+            type: 'STRING',
+            description: `Stripe Price ID for plan ${planCode}`,
+            isPublic: false
+          });
+        } else {
+           // If empty, we might want to delete it, but createPlatformSetting with empty value is also fine or we can delete
+           try {
+             await ApiClient.deletePlatformSetting(key);
+           } catch (e) {
+             // ignore if not found
+           }
+        }
+      } catch (e) {
+        console.error('Error saving stripe price id', e);
+        showToast('Failed to save Stripe Price ID', 'error');
+      }
+
       showToast('Plan updated successfully', 'success');
       await loadData();
     } catch (err: any) {
@@ -294,6 +329,22 @@ export default function PlanDetailPage() {
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Stripe Price ID
+                </label>
+                <input
+                  type="text"
+                  value={stripePriceId}
+                  onChange={(e) => setStripePriceId(e.target.value)}
+                  placeholder="price_..."
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  The Stripe Price ID for this plan in the current mode.
+                </p>
               </div>
 
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">

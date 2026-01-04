@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,12 @@ public class PlatformSettingService {
         return platformSettingRepository.findByKey(key)
                 .map(PlatformSetting::getValue)
                 .orElse(defaultValue);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> getSettingsValuesByPrefix(String prefix) {
+        return platformSettingRepository.findByKeyStartingWith(prefix).stream()
+                .collect(Collectors.toMap(PlatformSetting::getKey, PlatformSetting::getValue));
     }
 
     @Transactional
@@ -89,4 +96,3 @@ public class PlatformSettingService {
                 .build();
     }
 }
-

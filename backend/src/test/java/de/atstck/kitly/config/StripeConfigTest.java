@@ -33,9 +33,13 @@ class StripeConfigTest {
         when(platformSettingService.getSettingValue("stripe.mode", "test")).thenReturn("test");
         when(platformSettingService.getSettingValue("stripe.test.api_key", null)).thenReturn("sk_test_from_db");
         when(platformSettingService.getSettingValue("stripe.test.webhook_secret", null)).thenReturn("whsec_test_from_db");
-        when(platformSettingService.getSettingValue("stripe.test.plan.STARTER", null)).thenReturn("price_starter_dynamic");
-        when(platformSettingService.getSettingValue("stripe.test.plan.BUSINESS", null)).thenReturn("price_business_dynamic");
-        when(platformSettingService.getSettingValue("stripe.test.plan.ENTERPRISE", null)).thenReturn("price_enterprise_dynamic");
+
+        Map<String, String> planSettings = Map.of(
+            "stripe.plan.STARTER", "price_starter_dynamic",
+            "stripe.plan.BUSINESS", "price_business_dynamic",
+            "stripe.plan.ENTERPRISE", "price_enterprise_dynamic"
+        );
+        when(platformSettingService.getSettingsValuesByPrefix("stripe.plan.")).thenReturn(planSettings);
 
         // When
         stripeConfig.refreshStripeConfig();
@@ -50,7 +54,10 @@ class StripeConfigTest {
     void testGetPriceIdForPlan_caseInsensitive() {
         // Given
         when(platformSettingService.getSettingValue("stripe.mode", "test")).thenReturn("test");
-        when(platformSettingService.getSettingValue("stripe.test.plan.STARTER", null)).thenReturn("price_starter");
+        Map<String, String> planSettings = Map.of(
+            "stripe.plan.STARTER", "price_starter"
+        );
+        when(platformSettingService.getSettingsValuesByPrefix("stripe.plan.")).thenReturn(planSettings);
 
         // When
         stripeConfig.refreshStripeConfig();
@@ -65,7 +72,7 @@ class StripeConfigTest {
     void testGetPriceIdForPlan_notConfigured() {
         // Given
         when(platformSettingService.getSettingValue("stripe.mode", "test")).thenReturn("test");
-        when(platformSettingService.getSettingValue("stripe.test.plan.STARTER", null)).thenReturn(null);
+        when(platformSettingService.getSettingsValuesByPrefix("stripe.plan.")).thenReturn(Map.of());
 
         // When
         stripeConfig.refreshStripeConfig();
@@ -78,8 +85,11 @@ class StripeConfigTest {
     void testGetPlanForPriceId() {
         // Given
         when(platformSettingService.getSettingValue("stripe.mode", "test")).thenReturn("test");
-        when(platformSettingService.getSettingValue("stripe.test.plan.STARTER", null)).thenReturn("price_abc123");
-        when(platformSettingService.getSettingValue("stripe.test.plan.BUSINESS", null)).thenReturn("price_def456");
+        Map<String, String> planSettings = Map.of(
+            "stripe.plan.STARTER", "price_abc123",
+            "stripe.plan.BUSINESS", "price_def456"
+        );
+        when(platformSettingService.getSettingsValuesByPrefix("stripe.plan.")).thenReturn(planSettings);
 
         // When
         stripeConfig.refreshStripeConfig();
@@ -94,9 +104,12 @@ class StripeConfigTest {
     void testGetAllPlanPrices() {
         // Given
         when(platformSettingService.getSettingValue("stripe.mode", "test")).thenReturn("test");
-        when(platformSettingService.getSettingValue("stripe.test.plan.STARTER", null)).thenReturn("price_starter");
-        when(platformSettingService.getSettingValue("stripe.test.plan.BUSINESS", null)).thenReturn("price_business");
-        when(platformSettingService.getSettingValue("stripe.test.plan.PREMIUM", null)).thenReturn("price_premium");
+        Map<String, String> planSettings = Map.of(
+            "stripe.plan.STARTER", "price_starter",
+            "stripe.plan.BUSINESS", "price_business",
+            "stripe.plan.PREMIUM", "price_premium"
+        );
+        when(platformSettingService.getSettingsValuesByPrefix("stripe.plan.")).thenReturn(planSettings);
 
         // When
         stripeConfig.refreshStripeConfig();

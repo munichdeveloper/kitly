@@ -50,6 +50,11 @@ public class PlatformAdminController {
             Authentication authentication) {
         UUID userId = getUserIdFromAuthentication(authentication);
         PlatformSettingDTO setting = platformSettingService.createOrUpdateSetting(request, userId);
+
+        if (request.getKey().startsWith("stripe.")) {
+            stripeConfig.refreshStripeConfig();
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).body(setting);
     }
 
@@ -62,6 +67,11 @@ public class PlatformAdminController {
         request.setKey(key);
         UUID userId = getUserIdFromAuthentication(authentication);
         PlatformSettingDTO setting = platformSettingService.createOrUpdateSetting(request, userId);
+
+        if (key.startsWith("stripe.")) {
+            stripeConfig.refreshStripeConfig();
+        }
+
         return ResponseEntity.ok(setting);
     }
 
@@ -69,6 +79,11 @@ public class PlatformAdminController {
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
     public ResponseEntity<Void> deleteSetting(@PathVariable String key) {
         platformSettingService.deleteSetting(key);
+
+        if (key.startsWith("stripe.")) {
+            stripeConfig.refreshStripeConfig();
+        }
+
         return ResponseEntity.noContent().build();
     }
 
