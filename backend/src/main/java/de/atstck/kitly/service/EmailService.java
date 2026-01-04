@@ -1,11 +1,8 @@
 package de.atstck.kitly.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
+import de.atstck.kitly.service.mail.MailSenderProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -14,11 +11,8 @@ import java.util.Map;
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final MailSenderProvider mailSenderProvider;
     private final EmailTemplateService templateService;
-
-    @Value("${app.email.from:noreply@kitly.com}")
-    private String fromEmail;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -35,27 +29,22 @@ public class EmailService {
     @Value("${app.email.branding:kitly}")
     private String defaultBranding;
 
-    public EmailService(JavaMailSender mailSender, EmailTemplateService templateService) {
-        this.mailSender = mailSender;
+    public EmailService(MailSenderProvider mailSenderProvider, EmailTemplateService templateService) {
+        this.mailSenderProvider = mailSenderProvider;
         this.templateService = templateService;
     }
 
-    public void sendVerificationEmail(String toEmail, String token, String username) {
-        sendVerificationEmail(toEmail, token, username, defaultLocale, defaultBranding);
+    public void sendVerificationEmail(String toEmail, String toName, String token, String username) {
+        sendVerificationEmail(toEmail, toName, token, username, defaultLocale, defaultBranding);
     }
 
-    public void sendVerificationEmail(String toEmail, String token, String username, String locale) {
-        sendVerificationEmail(toEmail, token, username, locale, defaultBranding);
+    public void sendVerificationEmail(String toEmail, String toName, String token, String username, String locale) {
+        sendVerificationEmail(toEmail, toName, token, username, locale, defaultBranding);
     }
 
-    public void sendVerificationEmail(String toEmail, String token, String username, String locale, String branding) {
+    public void sendVerificationEmail(String toEmail, String toName, String token, String username, String locale, String branding) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Bestätige deine E-Mail-Adresse");
+            String subject = "Bestätige deine E-Mail-Adresse";
 
             // Die URL zur E-Mail-Verifizierung muss gegen das Landing Page Frontend zeigen
             String verificationUrl = frontendUrl + "/signup/verify-email?token=" + token;
@@ -66,12 +55,10 @@ public class EmailService {
                     "verificationUrl", verificationUrl
             ));
 
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            mailSenderProvider.sendHtmlMail(toEmail, toName, subject, htmlContent);
             log.info("Verification email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send verification email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send verification email", e);
         }
@@ -87,12 +74,7 @@ public class EmailService {
 
     public void sendPasswordResetEmail(String toEmail, String token, String username, String locale, String branding) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Passwort zurücksetzen");
+            String subject = "Passwort zurücksetzen";
 
             // Die URL zum Zurücksetzen des Passworts muss gegen das App-Frontend zeigen
             String resetUrl = frontendAppUrl + "/reset-password?token=" + token;
@@ -103,33 +85,26 @@ public class EmailService {
                     "resetUrl", resetUrl
             ));
 
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            mailSenderProvider.sendHtmlMail(toEmail, subject, htmlContent, htmlContent);
             log.info("Password reset email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send password reset email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send password reset email", e);
         }
     }
 
-    public void sendOnboardingEmail(String toEmail, String username, String planName) {
-        sendOnboardingEmail(toEmail, username, planName, defaultLocale, defaultBranding);
+    public void sendOnboardingEmail(String toEmail, String toName, String username, String planName) {
+        sendOnboardingEmail(toEmail, toName, username, planName, defaultLocale, defaultBranding);
     }
 
-    public void sendOnboardingEmail(String toEmail, String username, String planName, String locale) {
-        sendOnboardingEmail(toEmail, username, planName, locale, defaultBranding);
+    public void sendOnboardingEmail(String toEmail, String toName, String username, String planName, String locale) {
+        sendOnboardingEmail(toEmail, toName, username, planName, locale, defaultBranding);
     }
 
-    public void sendOnboardingEmail(String toEmail, String username, String planName, String locale, String branding) {
+    public void sendOnboardingEmail(String toEmail, String toName, String username, String planName, String locale, String branding) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(toEmail);
-            helper.setSubject("Willkommen - Dein Konto ist aktiv!");
+            String subject = "Willkommen - Dein Konto ist aktiv!";
 
             String template = templateService.loadOnboardingTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
@@ -139,12 +114,10 @@ public class EmailService {
                     "docsUrl", docsUrl
             ));
 
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
+            mailSenderProvider.sendHtmlMail(toEmail, toName, subject, htmlContent);
             log.info("Onboarding email sent to: {} (locale: {}, branding: {}, plan: {})", toEmail, locale, branding, planName);
 
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Failed to send onboarding email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send onboarding email", e);
         }

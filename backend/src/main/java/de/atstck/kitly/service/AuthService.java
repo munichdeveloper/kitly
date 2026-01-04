@@ -29,7 +29,7 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
-    
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -50,11 +50,11 @@ public class AuthService {
     private int passwordResetTokenValidityHours;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
-                      PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
-                      JwtUtil jwtUtil, TenantService tenantService,
-                      EmailVerificationTokenRepository emailVerificationTokenRepository,
-                      PasswordResetTokenRepository passwordResetTokenRepository,
-                      EmailService emailService) {
+                       PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager,
+                       JwtUtil jwtUtil, TenantService tenantService,
+                       EmailVerificationTokenRepository emailVerificationTokenRepository,
+                       PasswordResetTokenRepository passwordResetTokenRepository,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -65,17 +65,17 @@ public class AuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
     }
-    
+
     @Transactional
     public AuthResponse signup(SignupRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username is already taken");
         }
-        
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email is already in use");
         }
-        
+
         // Wenn E-Mail-Verifizierung aktiviert ist, Token erstellen und E-Mail senden
         if (emailVerificationEnabled) {
             return createVerificationTokenAndSendEmail(request);
@@ -107,8 +107,10 @@ public class AuthService {
 
         emailVerificationTokenRepository.save(verificationToken);
 
+        String name = request.getFirstName() != null ? request.getFirstName() : request.getUsername();
+
         // E-Mail senden
-        emailService.sendVerificationEmail(request.getEmail(), token, request.getUsername());
+        emailService.sendVerificationEmail(request.getEmail(), name, token, request.getUsername());
 
         // Antwort ohne JWT Token zurückgeben
         return new AuthResponse(null, null, request.getEmail());
@@ -179,15 +181,15 @@ public class AuthService {
                 .isActive(true)
                 .emailVerified(true)
                 .build();
-        
+
         Set<Role> roles = new HashSet<>();
         Role userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
         roles.add(userRole);
         user.setRoles(roles);
-        
+
         userRepository.save(user);
-        
+
         // Create default tenant
         SignupRequest request = new SignupRequest();
         request.setUsername(verificationToken.getUsername());
@@ -247,18 +249,18 @@ public class AuthService {
             }
         }
     }
-    
+
     public AuthResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
-        
+
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String token = jwtUtil.generateToken(userDetails);
-        
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         return new AuthResponse(token, user.getUsername(), user.getEmail());
     }
 

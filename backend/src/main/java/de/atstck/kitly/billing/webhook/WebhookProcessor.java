@@ -27,7 +27,7 @@ import java.util.*;
  */
 @Service
 public class WebhookProcessor {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(WebhookProcessor.class);
     private static final Set<String> SUPPORTED_EVENTS = Set.of(
             "customer.subscription.created",
@@ -48,7 +48,7 @@ public class WebhookProcessor {
             "invoice.updated",
             "invoice_payment.paid"
     );
-    
+
     private final WebhookInboxRepository webhookInboxRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;
@@ -76,7 +76,7 @@ public class WebhookProcessor {
         this.stripeConfig = stripeConfig;
         this.emailService = emailService;
     }
-    
+
     /**
      * Process pending webhooks every 5 seconds
      */
@@ -85,25 +85,25 @@ public class WebhookProcessor {
     public void processPendingWebhooks() {
         List<WebhookInbox> pendingWebhooks = webhookInboxRepository
                 .findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING);
-        
+
         if (pendingWebhooks.isEmpty()) {
             return;
         }
-        
+
         logger.info("Processing {} pending webhooks", pendingWebhooks.size());
-        
+
         for (WebhookInbox webhook : pendingWebhooks) {
             processWebhook(webhook);
         }
     }
-    
+
     private void processWebhook(WebhookInbox webhook) {
         try {
             webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSING);
             webhookInboxRepository.save(webhook);
-            
+
             String eventType = webhook.getEventType();
-            
+
             if (!SUPPORTED_EVENTS.contains(eventType)) {
                 logger.info("Skipping unsupported event type: {}", eventType);
                 webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSED);
@@ -111,7 +111,7 @@ public class WebhookProcessor {
                 webhookInboxRepository.save(webhook);
                 return;
             }
-            
+
             switch (eventType) {
                 case "customer.subscription.created":
                 case "customer.subscription.updated":
@@ -144,13 +144,13 @@ public class WebhookProcessor {
                     logger.debug("Received event {}, no action required", eventType);
                     break;
             }
-            
+
             webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSED);
             webhook.setProcessedAt(LocalDateTime.now());
             webhookInboxRepository.save(webhook);
-            
+
             logger.info("Successfully processed webhook: {}", webhook.getEventId());
-            
+
         } catch (Exception e) {
             logger.error("Error processing webhook: {}", webhook.getEventId(), e);
             webhook.setStatus(WebhookInbox.WebhookStatus.FAILED);
@@ -159,14 +159,14 @@ public class WebhookProcessor {
             webhookInboxRepository.save(webhook);
         }
     }
-    
+
     @SuppressWarnings("unchecked")
     private void handleSubscriptionChange(WebhookInbox webhook) {
         Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
         if (data == null) {
             throw new IllegalArgumentException("Missing data in webhook payload");
         }
-        
+
         Map<String, Object> subscriptionData = (Map<String, Object>) data.get("object");
         if (subscriptionData == null) {
             throw new IllegalArgumentException("Missing object in webhook data");
@@ -175,35 +175,35 @@ public class WebhookProcessor {
         // Extract subscription details
         String stripeSubscriptionId = (String) subscriptionData.get("id");
         String status = (String) subscriptionData.get("status");
-        
+
         // For demo purposes, we'll use metadata to identify the tenant
         Map<String, Object> metadata = (Map<String, Object>) subscriptionData.get("metadata");
         String tenantIdStr = metadata != null ? (String) metadata.get("tenant_id") : null;
-        
+
         if (tenantIdStr == null) {
             logger.warn("No tenant_id in subscription metadata, skipping");
             return;
         }
-        
+
         UUID tenantId = UUID.fromString(tenantIdStr);
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
-        
+
         // Find or create subscription
         Optional<Subscription> existingSubscription = subscriptionRepository
                 .findByTenantIdAndStatus(tenantId, Subscription.SubscriptionStatus.ACTIVE);
-        
+
         Subscription subscription = existingSubscription.orElseGet(() -> {
             Subscription newSub = new Subscription();
             newSub.setTenant(tenant);
             newSub.setStartsAt(LocalDateTime.now());
             return newSub;
         });
-        
+
         // Update subscription details
         subscription.setStripeSubscriptionId(stripeSubscriptionId);
         subscription.setStatus(mapStripeStatus(status));
-        
+
         // Extract plan details from metadata or items
         Map<String, Object> items = (Map<String, Object>) subscriptionData.get("items");
         if (items != null) {
@@ -239,9 +239,9 @@ public class WebhookProcessor {
                 }
             }
         }
-        
+
         subscriptionRepository.save(subscription);
-        
+
         // Recompute entitlements
         entitlementService.syncEntitlements(tenantId);
 
@@ -250,16 +250,16 @@ public class WebhookProcessor {
         eventPayload.put("tenantId", tenantId.toString());
         eventPayload.put("plan", subscription.getPlan().name());
         eventPayload.put("status", subscription.getStatus().name());
-        
+
         outboxService.publish("EntitlementsChanged", "Tenant", tenantId, eventPayload);
-        
+
         logger.info("Updated subscription for tenant: {}", tenantId);
     }
-    
+
     private void handleSubscriptionDeleted(WebhookInbox webhook) {
         handleSubscriptionChange(webhook);
     }
-    
+
     @SuppressWarnings("unchecked")
     private void handleCheckoutSessionCompleted(WebhookInbox webhook) {
         Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
@@ -296,7 +296,7 @@ public class WebhookProcessor {
         if (data == null) {
             return;
         }
-        
+
         Map<String, Object> invoiceData = (Map<String, Object>) data.get("object");
         if (invoiceData == null) {
             return;
@@ -335,14 +335,14 @@ public class WebhookProcessor {
         invoiceRepository.save(invoice);
         logger.info("Saved invoice {} for tenant {}", stripeInvoiceId, subscription.getTenant().getId());
     }
-    
+
     @SuppressWarnings("unchecked")
     private void handlePaymentFailed(WebhookInbox webhook) {
         Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
         if (data == null) {
             return;
         }
-        
+
         Map<String, Object> invoiceData = (Map<String, Object>) data.get("object");
         if (invoiceData == null) {
             return;
@@ -355,7 +355,7 @@ public class WebhookProcessor {
             // In a real system, you'd update the subscription status to PAST_DUE
         }
     }
-    
+
     private Subscription.SubscriptionStatus mapStripeStatus(String stripeStatus) {
         return switch (stripeStatus.toLowerCase()) {
             case "active" -> Subscription.SubscriptionStatus.ACTIVE;
@@ -365,7 +365,7 @@ public class WebhookProcessor {
             default -> Subscription.SubscriptionStatus.EXPIRED;
         };
     }
-    
+
     private Subscription.SubscriptionPlan mapPlanName(String planName) {
         return switch (planName.toLowerCase()) {
             case "starter" -> Subscription.SubscriptionPlan.STARTER;
@@ -389,8 +389,9 @@ public class WebhookProcessor {
             String ownerEmail = tenant.getOwner().getEmail();
             String ownerUsername = tenant.getOwner().getUsername();
             String planName = subscription.getPlan() != null ? subscription.getPlan().name() : "Unknown";
+            String ownerName = tenant.getOwner().getFirstName() != null ? tenant.getOwner().getFirstName() : ownerUsername;
 
-            emailService.sendOnboardingEmail(ownerEmail, ownerUsername, planName);
+            emailService.sendOnboardingEmail(ownerEmail, ownerName, ownerUsername, planName);
             logger.info("Onboarding email sent to {} for tenant {}", ownerEmail, tenant.getId());
         } catch (Exception e) {
             logger.error("Failed to send onboarding email for tenant {}", subscription.getTenant().getId(), e);

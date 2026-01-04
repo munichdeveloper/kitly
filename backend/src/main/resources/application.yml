@@ -53,19 +53,24 @@ jwt:
     expiration: 900000  # 15 minutes in milliseconds
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
-
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3002}
 
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000} # NIM Frontend URL
   frontend-app-url: ${FRONTEND_APP_URL:http://localhost:3001} # NIM App Frontend URL
   docs-url: ${DOCS_URL:https://docs.kitly.com} # Dokumentations-URL
   email:
-    from: ${MAIL_FROM:noreply@kitly.com}
+    provider: ${EMAIL_PROVIDER:INTERNAL} # INTERNAL or KITLY_MAIL
+    kitly-mail:
+      url: ${KITLY_MAIL_URL:http://localhost:8083/api/emails}
+      api-key: ${KITLY_MAIL_API_KEY:change-this-default-api-key}
+      username: ${KITLY_MAIL_USERNAME:admin}
+      password: ${KITLY_MAIL_PASSWORD:admin}
+    from: ${MAIL_FROM:noreply@n8n-instance-manager.de}
     locale: ${EMAIL_LOCALE:de_DE}
-    branding: ${EMAIL_BRANDING:kitly}
+    branding: ${EMAIL_BRANDING:nim}
   email-verification:
-    enabled: ${EMAIL_VERIFICATION_ENABLED:false}
+    enabled: ${EMAIL_VERIFICATION_ENABLED:true}
     token-validity-hours: ${EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS:24}
   password-reset:
     token-validity-hours: ${PASSWORD_RESET_TOKEN_VALIDITY_HOURS:24}
