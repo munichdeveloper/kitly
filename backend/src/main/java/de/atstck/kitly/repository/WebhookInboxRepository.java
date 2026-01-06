@@ -17,5 +17,5 @@ public interface WebhookInboxRepository extends JpaRepository<WebhookInbox, UUID
     
     List<WebhookInbox> findByProvider(String provider);
     
-    List<WebhookInbox> findByProviderAndStatus(String provider, WebhookInbox.WebhookStatus status);
+    List<WebhookInbox> findByProviderAndStatusOrderByCreatedAtAsc(String provider, WebhookInbox.WebhookStatus status);
 }

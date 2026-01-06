@@ -14,11 +14,13 @@ import de.atstck.kitly.repository.WebhookInboxRepository;
 import de.atstck.kitly.service.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -57,6 +59,14 @@ public class WebhookProcessor {
     private final OutboxService outboxService;
     private final StripeConfig stripeConfig;
     private final EmailService emailService;
+    private final TransactionTemplate transactionTemplate;
+
+    // Custom exception for retry logic
+    private static class RetryableWebhookException extends RuntimeException {
+        public RetryableWebhookException(String message) {
+            super(message);
+        }
+    }
 
     public WebhookProcessor(
             WebhookInboxRepository webhookInboxRepository,
@@ -66,7 +76,8 @@ public class WebhookProcessor {
             EntitlementService entitlementService,
             OutboxService outboxService,
             StripeConfig stripeConfig,
-            EmailService emailService) {
+            EmailService emailService,
+            TransactionTemplate transactionTemplate) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.tenantRepository = tenantRepository;
@@ -75,16 +86,17 @@ public class WebhookProcessor {
         this.outboxService = outboxService;
         this.stripeConfig = stripeConfig;
         this.emailService = emailService;
+        this.transactionTemplate = transactionTemplate;
     }
 
     /**
      * Process pending webhooks every 5 seconds
      */
     @Scheduled(fixedDelay = 5000)
-    @Transactional
     public void processPendingWebhooks() {
+        // Use ordered query to process events in sequence
         List<WebhookInbox> pendingWebhooks = webhookInboxRepository
-                .findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING);
+                .findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING);
 
         if (pendingWebhooks.isEmpty()) {
             return;
@@ -93,7 +105,12 @@ public class WebhookProcessor {
         logger.info("Processing {} pending webhooks", pendingWebhooks.size());
 
         for (WebhookInbox webhook : pendingWebhooks) {
-            processWebhook(webhook);
+            try {
+                // Process each webhook in its own transaction
+                transactionTemplate.executeWithoutResult(status -> processWebhook(webhook));
+            } catch (Exception e) {
+                logger.error("Unexpected error executing webhook transaction for {}", webhook.getEventId(), e);
+            }
         }
     }
 
@@ -153,6 +170,21 @@ public class WebhookProcessor {
 
             logger.info("Successfully processed webhook: {}", webhook.getEventId());
 
+        } catch (RetryableWebhookException e) {
+            logger.info("Webhook {} requires retry: {}", webhook.getEventId(), e.getMessage());
+            webhook.setRetryCount(webhook.getRetryCount() + 1);
+
+            // Allow up to 12 retries (approx 1 minute with 5s delay)
+            if (webhook.getRetryCount() > 12) {
+                 webhook.setStatus(WebhookInbox.WebhookStatus.FAILED);
+                 webhook.setErrorMessage("Max retries reached. Last error: " + e.getMessage());
+            } else {
+                 // Remain PENDING for next run
+                 webhook.setStatus(WebhookInbox.WebhookStatus.PENDING);
+                 logger.info("Setting status back to PENDING for webhook {} (attempt {})", webhook.getEventId(), webhook.getRetryCount());
+            }
+            webhookInboxRepository.save(webhook);
+
         } catch (Exception e) {
             logger.error("Error processing webhook: {}", webhook.getEventId(), e);
             webhook.setStatus(WebhookInbox.WebhookStatus.FAILED);
@@ -177,6 +209,27 @@ public class WebhookProcessor {
         // Extract subscription details
         String stripeSubscriptionId = (String) subscriptionData.get("id");
         String status = (String) subscriptionData.get("status");
+        String eventType = webhook.getEventType();
+
+        // Extract event timestamp to ensure ordering
+        long createdTimestamp = ((Number) subscriptionData.get("created")).longValue();
+        LocalDateTime eventTime = LocalDateTime.ofEpochSecond(createdTimestamp, 0, ZoneOffset.UTC);
+
+        // Safety check: If event is 'created' but we already have the subscription,
+        // it means we processed a newer event already. We skip to avoid overwriting newer state.
+        Optional<Subscription> byStripeId = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
+
+        if (byStripeId.isPresent()) {
+            Subscription existing = byStripeId.get();
+            // Compare timestamps: if stored event time is newer than this event, we skip properly
+            if (existing.getLastStripeEventAt() != null && existing.getLastStripeEventAt().isAfter(eventTime)) {
+                logger.info("Skipping outdated event for subscription {}. Event time: {}, Last processed: {}",
+                        stripeSubscriptionId, eventTime, existing.getLastStripeEventAt());
+                return;
+            }
+        }
+
+        // Removed old 'created' check as the timestamp check covers it more robustly
 
         // For demo purposes, we'll use metadata to identify the tenant
         Map<String, Object> metadata = (Map<String, Object>) subscriptionData.get("metadata");
@@ -192,19 +245,44 @@ public class WebhookProcessor {
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
         // Find or create subscription
-        Optional<Subscription> existingSubscription = subscriptionRepository
-                .findByTenantIdAndStatus(tenantId, Subscription.SubscriptionStatus.ACTIVE);
 
-        Subscription subscription = existingSubscription.orElseGet(() -> {
-            Subscription newSub = new Subscription();
-            newSub.setTenant(tenant);
-            newSub.setStartsAt(LocalDateTime.now());
-            return newSub;
-        });
+        Subscription subscription;
+        if (byStripeId.isPresent()) {
+            subscription = byStripeId.get();
+        } else {
+             // If not found by Stripe ID, check if we have an existing ACTIVE or TRIALING subscription for this tenant
+             // that we might want to replace (e.g. upgrade from internal plan or previous sub).
+             // However, to be safe and avoid overwriting disjoint subscriptions, we should be careful.
+             // Assuming 1 subscription per Tenant model:
+            Optional<Subscription> existingSubscription = subscriptionRepository
+                    .findByTenantIdAndStatus(tenantId, Subscription.SubscriptionStatus.ACTIVE);
+
+            // Also check for trialing if no active found?
+            if (existingSubscription.isEmpty()) {
+                 existingSubscription = subscriptionRepository
+                    .findByTenantIdAndStatus(tenantId, Subscription.SubscriptionStatus.TRIALING);
+            }
+
+            subscription = existingSubscription.orElseGet(() -> {
+                Subscription newSub = new Subscription();
+                newSub.setTenant(tenant);
+                newSub.setStartsAt(LocalDateTime.now());
+                return newSub;
+            });
+
+            if (subscription.getStripeSubscriptionId() != null && !subscription.getStripeSubscriptionId().equals(stripeSubscriptionId)) {
+                logger.info("Replacing previous subscription ID {} with new ID {} for tenant {}",
+                        subscription.getStripeSubscriptionId(), stripeSubscriptionId, tenantId);
+            }
+        }
 
         // Update subscription details
         subscription.setStripeSubscriptionId(stripeSubscriptionId);
         subscription.setStatus(mapStripeStatus(status));
+        subscription.setLastStripeEventAt(eventTime);
+
+        logger.info("Persisting subscription update for Tenant {}: StripeID={}, Status={}, EventTime={}",
+                tenantId, stripeSubscriptionId, status, eventTime);
 
         // Extract plan details from metadata or items
         Map<String, Object> items = (Map<String, Object>) subscriptionData.get("items");
@@ -242,10 +320,40 @@ public class WebhookProcessor {
             }
         }
 
-        subscriptionRepository.save(subscription);
+        try {
+            subscriptionRepository.save(subscription);
+        } catch (DataIntegrityViolationException e) {
+            // Check if it's a constraint violation on stripe_subscription_id
+            logger.warn("Data integrity violation saving subscription (likely duplicate). Retrying fetch. Error: {}", e.getMessage());
 
-        // Recompute entitlements
-        entitlementService.syncEntitlements(tenantId);
+            // Try to find the existing one that caused the conflict
+            Optional<Subscription> duplicate = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
+            if (duplicate.isPresent()) {
+                subscription = duplicate.get();
+                // Re-apply updates to the found instance
+                subscription.setStripeSubscriptionId(stripeSubscriptionId);
+                subscription.setStatus(mapStripeStatus(status));
+                // Plan update logic would need to run again or we trust the previous logic was same.
+                // Simpler to just re-save this one.
+                subscriptionRepository.save(subscription);
+                logger.info("Recovered from duplicate subscription creation. Updated existing ID: {}", subscription.getId());
+            } else {
+                // If we still can't find it, rethrow
+                throw e;
+            }
+        }
+
+        // Recompute entitlements only if subscription is active or trialing
+        if (subscription.getStatus() == Subscription.SubscriptionStatus.ACTIVE ||
+                subscription.getStatus() == Subscription.SubscriptionStatus.TRIALING) {
+            try {
+                entitlementService.syncEntitlements(tenantId);
+            } catch (Exception e) {
+                logger.error("Failed to sync entitlements for tenant {}", tenantId, e);
+            }
+        } else {
+            logger.info("Skipping entitlement sync for tenant {} because subscription status is {}", tenantId, subscription.getStatus());
+        }
 
         // Publish outbox event
         Map<String, Object> eventPayload = new HashMap<>();
@@ -281,13 +389,14 @@ public class WebhookProcessor {
             logger.info("Checkout session completed for subscription: {}", subscriptionId);
 
             // Sende Onboarding-E-Mail nach erfolgreichem Checkout
-            Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(subscriptionId);
+            Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(subscriptionId);
             if (subscriptionOpt.isPresent()) {
                 Subscription subscription = subscriptionOpt.get();
                 logger.info("Sending onboarding email for subscription: {}", subscriptionId);
                 sendOnboardingEmail(subscription);
             } else {
                 logger.warn("Subscription not found for checkout session: {}", subscriptionId);
+                throw new RetryableWebhookException("Subscription not found for checkout session: " + subscriptionId);
             }
         }
     }
@@ -307,7 +416,7 @@ public class WebhookProcessor {
         String stripeInvoiceId = (String) invoiceData.get("id");
 
         // Find existing invoice or create new one
-        Optional<Invoice> existingInvoice = invoiceRepository.findByStripeInvoiceId(stripeInvoiceId);
+        Optional<Invoice> existingInvoice = invoiceRepository.findFirstByStripeInvoiceId(stripeInvoiceId);
         Invoice invoice;
 
         if (existingInvoice.isPresent()) {
@@ -319,10 +428,10 @@ public class WebhookProcessor {
                 return;
             }
 
-            Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+            Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
             if (subscriptionOpt.isEmpty()) {
                 logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
-                return;
+                throw new RetryableWebhookException("Subscription not found for invoice: " + stripeInvoiceId);
             }
 
             Subscription subscription = subscriptionOpt.get();
@@ -390,7 +499,7 @@ public class WebhookProcessor {
 
         String stripeInvoiceId = (String) invoiceData.get("id");
         // Check if invoice already handled (e.g. by payment succeeded coming first)
-         Optional<Invoice> existingInvoice = invoiceRepository.findByStripeInvoiceId(stripeInvoiceId);
+         Optional<Invoice> existingInvoice = invoiceRepository.findFirstByStripeInvoiceId(stripeInvoiceId);
          if (existingInvoice.isPresent() && existingInvoice.get().isEmailSent()) {
              logger.info("Invoice {} already processed and email sent.", stripeInvoiceId);
              return;
@@ -400,14 +509,14 @@ public class WebhookProcessor {
         String stripeSubscriptionId = (String) invoiceData.get("subscription");
         if (stripeSubscriptionId == null) {
             logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
-            return;
+            return; // Cannot retry without ID
         }
 
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+        Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
         if (subscriptionOpt.isEmpty()) {
             // It might be a one-off invoice or usage, but if no sub found we can't link to tenant easily yet.
              logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
-             return;
+             throw new RetryableWebhookException("Subscription not found for invoice: " + stripeInvoiceId);
         }
 
         Subscription subscription = subscriptionOpt.get();
@@ -443,10 +552,10 @@ public class WebhookProcessor {
         String customerEmail = (String) invoiceData.get("customer_email");
         String customerName = (String) invoiceData.get("customer_name");
 
-        Long amount = ((Number) invoiceData.get("amount_due")).longValue();
-        // Use amount_due for the email content "Invoice for X"
+        // amount_due is typically used for finalized invoices
+        long amount = ((Number) invoiceData.get("amount_due")).longValue();
         String currency = (String) invoiceData.get("currency");
-        Long createdDate = ((Number) invoiceData.get("created")).longValue();
+        long createdDate = ((Number) invoiceData.get("created")).longValue();
 
         String formattedAmount = String.format("%.2f", amount / 100.0);
         String formattedDate = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(
@@ -504,6 +613,7 @@ public class WebhookProcessor {
             case "trialing" -> Subscription.SubscriptionStatus.TRIALING;
             case "canceled" -> Subscription.SubscriptionStatus.CANCELLED;
             case "past_due" -> Subscription.SubscriptionStatus.PAST_DUE;
+            case "incomplete", "incomplete_expired", "unpaid" -> Subscription.SubscriptionStatus.EXPIRED;
             default -> Subscription.SubscriptionStatus.EXPIRED;
         };
     }

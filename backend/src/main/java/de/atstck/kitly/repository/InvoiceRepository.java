@@ -14,5 +14,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
     List<Invoice> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
     boolean existsByStripeInvoiceId(String stripeInvoiceId);
     Optional<Invoice> findByStripeInvoiceId(String stripeInvoiceId);
+    Optional<Invoice> findFirstByStripeInvoiceId(String stripeInvoiceId);
     List<Invoice> findByEmailSentFalseAndEmailScheduledAtBefore(LocalDateTime dateTime);
 }

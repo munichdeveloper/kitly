@@ -43,6 +43,9 @@ public class Subscription {
     @Column(precision = 10, scale = 2)
     private BigDecimal amount;
     
+    @Column(name = "last_stripe_event_at")
+    private LocalDateTime lastStripeEventAt;
+
     @Column(length = 3)
     @Builder.Default
     private String currency = "USD";

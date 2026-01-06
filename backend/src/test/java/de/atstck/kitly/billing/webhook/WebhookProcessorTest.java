@@ -15,8 +15,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Instant;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +46,9 @@ class WebhookProcessorTest {
     @Mock
     private OutboxService outboxService;
 
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @InjectMocks
     private WebhookProcessor webhookProcessor;
 
@@ -56,12 +63,19 @@ class WebhookProcessorTest {
                 .name("Test Tenant")
                 .slug("test-tenant")
                 .build();
+
+        // Mock TransactionTemplate to execute the action immediately
+        lenient().doAnswer(invocation -> {
+            Consumer<Object> consumer = invocation.getArgument(0);
+            consumer.accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
     }
 
     @Test
     void testProcessPendingWebhooks_NoWebhooks() {
         // Given: No pending webhooks
-        when(webhookInboxRepository.findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING))
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
                 .thenReturn(Collections.emptyList());
 
         // When: Processing pending webhooks
@@ -69,7 +83,7 @@ class WebhookProcessorTest {
 
         // Then: No processing should occur
         verify(webhookInboxRepository, times(1))
-                .findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING);
+                .findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING);
         verify(subscriptionRepository, never()).save(any());
     }
 
@@ -85,7 +99,7 @@ class WebhookProcessorTest {
                 .status(WebhookInbox.WebhookStatus.PENDING)
                 .build();
 
-        when(webhookInboxRepository.findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING))
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
                 .thenReturn(List.of(webhook));
 
         // When: Processing the webhook
@@ -106,6 +120,7 @@ class WebhookProcessorTest {
         Map<String, Object> subscriptionData = new HashMap<>();
         subscriptionData.put("id", "sub_test_123");
         subscriptionData.put("status", "active");
+        subscriptionData.put("created", Instant.now().getEpochSecond()); // added timestamp
         subscriptionData.put("metadata", Map.of("tenant_id", testTenantId.toString()));
         subscriptionData.put("items", Map.of("data", List.of(
                 Map.of("price", Map.of("metadata", Map.of("plan", "starter")))
@@ -124,7 +139,7 @@ class WebhookProcessorTest {
                 .retryCount(0)
                 .build();
 
-        when(webhookInboxRepository.findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING))
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
                 .thenReturn(List.of(webhook));
         when(tenantRepository.findById(testTenantId))
                 .thenReturn(Optional.of(testTenant));
@@ -151,11 +166,13 @@ class WebhookProcessorTest {
                 .tenant(testTenant)
                 .plan(Subscription.SubscriptionPlan.STARTER)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
+                .stripeSubscriptionId("sub_test_123") // Make sure ID matches so findFirst works if mocked or logic uses it
                 .build();
 
         Map<String, Object> subscriptionData = new HashMap<>();
         subscriptionData.put("id", "sub_test_123");
         subscriptionData.put("status", "active");
+        subscriptionData.put("created", Instant.now().getEpochSecond()); // added timestamp
         subscriptionData.put("metadata", Map.of("tenant_id", testTenantId.toString()));
         subscriptionData.put("items", Map.of("data", List.of(
                 Map.of("price", Map.of("metadata", Map.of("plan", "business")))
@@ -174,12 +191,15 @@ class WebhookProcessorTest {
                 .retryCount(0)
                 .build();
 
-        when(webhookInboxRepository.findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING))
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
                 .thenReturn(List.of(webhook));
         when(tenantRepository.findById(testTenantId))
                 .thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
+
+        // Fix: Use findFirstByStripeSubscriptionId as per new logic
+        when(subscriptionRepository.findFirstByStripeSubscriptionId("sub_test_123"))
                 .thenReturn(Optional.of(existingSubscription));
+
         when(subscriptionRepository.save(any(Subscription.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -211,7 +231,7 @@ class WebhookProcessorTest {
                 .retryCount(0)
                 .build();
 
-        when(webhookInboxRepository.findByProviderAndStatus("stripe", WebhookInbox.WebhookStatus.PENDING))
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
                 .thenReturn(List.of(webhook));
 
         // When: Processing the webhook
