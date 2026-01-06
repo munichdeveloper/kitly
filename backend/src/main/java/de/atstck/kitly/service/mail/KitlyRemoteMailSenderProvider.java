@@ -75,6 +75,12 @@ public class KitlyRemoteMailSenderProvider implements MailSenderProvider {
         }
     }
 
+    @Override
+    public void sendHtmlMailWithAttachment(String to, String toName, String subject, String htmlContent, String attachmentName, byte[] attachmentData, String mimeType) {
+        log.warn("Attachments are not yet supported for KITLY_MAIL provider. Sending email without attachment to {}", to);
+        sendHtmlMail(to, toName, subject, htmlContent);
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
@@ -88,4 +94,3 @@ public class KitlyRemoteMailSenderProvider implements MailSenderProvider {
         private String textContent;
     }
 }
-

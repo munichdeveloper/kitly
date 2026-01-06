@@ -4,6 +4,7 @@ import de.atstck.kitly.service.mail.MailSenderProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
@@ -120,6 +121,36 @@ public class EmailService {
         } catch (Exception e) {
             log.error("Failed to send onboarding email to: {}", toEmail, e);
             throw new RuntimeException("Failed to send onboarding email", e);
+        }
+    }
+
+    public void sendInvoiceEmail(String toEmail, String toName, String invoiceNumber, String invoicePdfUrl, String amount, String currency, String date) {
+        sendInvoiceEmail(toEmail, toName, invoiceNumber, invoicePdfUrl, amount, currency, date, defaultLocale, defaultBranding);
+    }
+
+    public void sendInvoiceEmail(String toEmail, String toName, String invoiceNumber, String invoicePdfUrl, String amount, String currency, String date, String locale, String branding) {
+        try {
+            String subject = "Deine Rechnung " + invoiceNumber;
+
+            String template = templateService.loadInvoiceTemplate(locale, branding);
+            String htmlContent = templateService.replacePlaceholders(template, Map.of(
+                    "username", toName != null ? toName : toEmail,
+                    "invoiceNumber", invoiceNumber,
+                    "amount", amount,
+                    "currency", currency,
+                    "date", date,
+                    "downloadUrl", invoicePdfUrl,
+                    "contactUrl", frontendAppUrl + "/support"
+            ));
+
+            byte[] pdfContent = new RestTemplate().getForObject(invoicePdfUrl, byte[].class);
+
+            mailSenderProvider.sendHtmlMailWithAttachment(toEmail, toName, subject, htmlContent, "invoice_" + invoiceNumber + ".pdf", pdfContent, "application/pdf");
+            log.info("Invoice email sent to: {} (locale: {}, branding: {}, invoice: {})", toEmail, locale, branding, invoiceNumber);
+
+        } catch (Exception e) {
+            log.error("Failed to send invoice email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send invoice email", e);
         }
     }
 }

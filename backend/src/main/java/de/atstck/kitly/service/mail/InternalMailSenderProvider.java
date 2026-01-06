@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -42,5 +43,26 @@ public class InternalMailSenderProvider implements MailSenderProvider {
             throw new RuntimeException("Failed to send email", e);
         }
     }
-}
 
+    @Override
+    public void sendHtmlMailWithAttachment(String to, String toName, String subject, String htmlContent, String attachmentName, byte[] attachmentData, String mimeType) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+
+            helper.addAttachment(attachmentName, new ByteArrayResource(attachmentData), mimeType);
+
+            mailSender.send(message);
+            log.info("Email with attachment sent to: {} via INTERNAL provider", to);
+
+        } catch (MessagingException e) {
+            log.error("Failed to send email with attachment to: {}", to, e);
+            throw new RuntimeException("Failed to send email with attachment", e);
+        }
+    }
+}

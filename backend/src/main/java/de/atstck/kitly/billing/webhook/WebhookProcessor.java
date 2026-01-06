@@ -121,6 +121,7 @@ public class WebhookProcessor {
                     handleSubscriptionDeleted(webhook);
                     break;
                 case "invoice.payment_succeeded":
+                case "invoice.paid":
                     handlePaymentSucceeded(webhook);
                     break;
                 case "invoice.payment_failed":
@@ -129,7 +130,9 @@ public class WebhookProcessor {
                 case "checkout.session.completed":
                     handleCheckoutSessionCompleted(webhook);
                     break;
-                case "invoice.paid":
+                case "invoice.finalized":
+                    handleInvoiceFinalized(webhook);
+                    break;
                 case "invoice.created":
                 case "payment_intent.succeeded":
                 case "payment_intent.created":
@@ -137,7 +140,6 @@ public class WebhookProcessor {
                 case "payment_method.attached":
                 case "customer.created":
                 case "customer.updated":
-                case "invoice.finalized":
                 case "invoice.updated":
                 case "invoice_payment.paid":
                     // These events are part of the flow but we rely on other events for processing
@@ -303,37 +305,55 @@ public class WebhookProcessor {
         }
 
         String stripeInvoiceId = (String) invoiceData.get("id");
-        if (invoiceRepository.existsByStripeInvoiceId(stripeInvoiceId)) {
-            logger.info("Invoice already exists: {}", stripeInvoiceId);
-            return;
+
+        // Find existing invoice or create new one
+        Optional<Invoice> existingInvoice = invoiceRepository.findByStripeInvoiceId(stripeInvoiceId);
+        Invoice invoice;
+
+        if (existingInvoice.isPresent()) {
+            invoice = existingInvoice.get();
+        } else {
+            String stripeSubscriptionId = (String) invoiceData.get("subscription");
+            if (stripeSubscriptionId == null) {
+                logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
+                return;
+            }
+
+            Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+            if (subscriptionOpt.isEmpty()) {
+                logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
+                return;
+            }
+
+            Subscription subscription = subscriptionOpt.get();
+            invoice = new Invoice();
+            invoice.setTenantId(subscription.getTenant().getId());
+            invoice.setStripeInvoiceId(stripeInvoiceId);
         }
 
-        String stripeSubscriptionId = (String) invoiceData.get("subscription");
-        if (stripeSubscriptionId == null) {
-            logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
-            return;
+        // Update fields
+        invoice.setInvoiceNumber((String) invoiceData.get("number"));
+        invoice.setAmountDue(((Number) invoiceData.get("amount_due")).longValue());
+        invoice.setAmountPaid(((Number) invoiceData.get("amount_paid")).longValue());
+        invoice.setCurrency((String) invoiceData.get("currency"));
+        invoice.setStatus((String) invoiceData.get("status"));
+        invoice.setInvoicePdf((String) invoiceData.get("invoice_pdf"));
+        invoice.setHostedInvoiceUrl((String) invoiceData.get("hosted_invoice_url"));
+
+        // If email has not been sent yet, send it now (as paid invoice)
+        if (!invoice.isEmailSent()) {
+            sendInvoiceEmailImmediately(invoice, invoiceData);
+            invoice.setEmailSent(true);
+            invoice.setEmailScheduledAt(null); // Clear schedule as sent
+        } else {
+             // Maybe email was sent as "Open" already?
+             // We could send a "Receipt" email here if we wanted to distinguish between Invoice and Receipt.
+             // For now, let's assume one email per invoice is enough, or we can improve later.
+             logger.info("Email for invoice {} already sent.", stripeInvoiceId);
         }
-
-        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
-        if (subscriptionOpt.isEmpty()) {
-            logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
-            return;
-        }
-
-        Subscription subscription = subscriptionOpt.get();
-
-        Invoice invoice = Invoice.builder()
-                .tenantId(subscription.getTenant().getId())
-                .stripeInvoiceId(stripeInvoiceId)
-                .amountPaid(((Number) invoiceData.get("amount_paid")).longValue())
-                .currency((String) invoiceData.get("currency"))
-                .status((String) invoiceData.get("status"))
-                .invoicePdf((String) invoiceData.get("invoice_pdf"))
-                .hostedInvoiceUrl((String) invoiceData.get("hosted_invoice_url"))
-                .build();
 
         invoiceRepository.save(invoice);
-        logger.info("Saved invoice {} for tenant {}", stripeInvoiceId, subscription.getTenant().getId());
+        logger.info("Saved invoice {} (PAID) for tenant {}", stripeInvoiceId, invoice.getTenantId());
     }
 
     @SuppressWarnings("unchecked")
@@ -353,6 +373,128 @@ public class WebhookProcessor {
         if (subscriptionId != null) {
             logger.warn("Payment failed for subscription: {}", subscriptionId);
             // In a real system, you'd update the subscription status to PAST_DUE
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleInvoiceFinalized(WebhookInbox webhook) {
+        Map<String, Object> data = (Map<String, Object>) webhook.getPayload().get("data");
+        if (data == null) {
+            return;
+        }
+
+        Map<String, Object> invoiceData = (Map<String, Object>) data.get("object");
+        if (invoiceData == null) {
+            return;
+        }
+
+        String stripeInvoiceId = (String) invoiceData.get("id");
+        // Check if invoice already handled (e.g. by payment succeeded coming first)
+         Optional<Invoice> existingInvoice = invoiceRepository.findByStripeInvoiceId(stripeInvoiceId);
+         if (existingInvoice.isPresent() && existingInvoice.get().isEmailSent()) {
+             logger.info("Invoice {} already processed and email sent.", stripeInvoiceId);
+             return;
+         }
+
+        // Find Subscription to get Tenant
+        String stripeSubscriptionId = (String) invoiceData.get("subscription");
+        if (stripeSubscriptionId == null) {
+            logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
+            return;
+        }
+
+        Optional<Subscription> subscriptionOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+        if (subscriptionOpt.isEmpty()) {
+            // It might be a one-off invoice or usage, but if no sub found we can't link to tenant easily yet.
+             logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
+             return;
+        }
+
+        Subscription subscription = subscriptionOpt.get();
+
+        Invoice invoice = existingInvoice.orElseGet(() -> {
+             Invoice newInvoice = new Invoice();
+             newInvoice.setTenantId(subscription.getTenant().getId());
+             newInvoice.setStripeInvoiceId(stripeInvoiceId);
+             return newInvoice;
+        });
+
+        invoice.setInvoiceNumber((String) invoiceData.get("number"));
+        invoice.setAmountDue(((Number) invoiceData.get("amount_due")).longValue());
+        invoice.setAmountPaid(((Number) invoiceData.get("amount_paid")).longValue()); // Likely 0 or partial
+        // Use amount_due for the display amount usually, but amount_paid tracks what is paid.
+        invoice.setCurrency((String) invoiceData.get("currency"));
+        invoice.setStatus((String) invoiceData.get("status")); // e.g. open
+        invoice.setInvoicePdf((String) invoiceData.get("invoice_pdf"));
+        invoice.setHostedInvoiceUrl((String) invoiceData.get("hosted_invoice_url"));
+
+        // Schedule email
+        if (!invoice.isEmailSent()) {
+            invoice.setEmailScheduledAt(LocalDateTime.now().plusMinutes(5));
+            logger.info("Scheduled email for invoice {} at {}", stripeInvoiceId, invoice.getEmailScheduledAt());
+        }
+
+        invoiceRepository.save(invoice);
+    }
+
+    private void sendInvoiceEmailImmediately(Invoice invoice, Map<String, Object> invoiceData) {
+        String invoiceNumber = (String) invoiceData.get("number");
+        String invoicePdfUrl = (String) invoiceData.get("invoice_pdf");
+        String customerEmail = (String) invoiceData.get("customer_email");
+        String customerName = (String) invoiceData.get("customer_name");
+
+        Long amount = ((Number) invoiceData.get("amount_due")).longValue();
+        // Use amount_due for the email content "Invoice for X"
+        String currency = (String) invoiceData.get("currency");
+        Long createdDate = ((Number) invoiceData.get("created")).longValue();
+
+        String formattedAmount = String.format("%.2f", amount / 100.0);
+        String formattedDate = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(
+            java.time.LocalDateTime.ofEpochSecond(createdDate, 0, java.time.ZoneOffset.UTC)
+        );
+
+        try {
+            if (customerEmail != null) {
+                emailService.sendInvoiceEmail(
+                    customerEmail,
+                    customerName,
+                    invoiceNumber,
+                    invoicePdfUrl,
+                    formattedAmount,
+                    currency != null ? currency.toUpperCase() : "USD",
+                    formattedDate
+                );
+                logger.info("Sent invoice {} to {}", invoiceNumber, customerEmail);
+            } else {
+                 // Try to find via subscription/tenant (re-fetch to be safe or use invoice.getTenantId)
+                 // We have tenantId in invoice
+                 Optional<Tenant> tenantOpt = tenantRepository.findById(invoice.getTenantId());
+                 if (tenantOpt.isPresent() && tenantOpt.get().getOwner() != null) {
+                      String ownerEmail = tenantOpt.get().getOwner().getEmail();
+                      String ownerName = tenantOpt.get().getOwner().getUsername();
+
+                      emailService.sendInvoiceEmail(
+                            ownerEmail,
+                            ownerName,
+                            invoiceNumber,
+                            invoicePdfUrl,
+                            formattedAmount,
+                            currency != null ? currency.toUpperCase() : "USD",
+                            formattedDate
+                        );
+                        logger.info("Sent invoice {} to owner {}", invoiceNumber, ownerEmail);
+                  } else {
+                      logger.warn("Could not determine recipient for invoice {}", invoiceNumber);
+                  }
+            }
+        } catch (Exception e) {
+            logger.error("Failed to send invoice email for invoice {}", invoiceNumber, e);
+            // We can't do much here inside a transaction except log it.
+            // In a better system we would have an EmailJob queue.
+            // Here, if it fails, emailSent remains false (because we only set it to true after this returns successfully in caller method if we move logic there, OR we suppress exception here).
+            // Actually, suppressing exception means we mark it sent even if failed? No, caller sets it.
+            // If I throw here, transaction rolls back?
+            throw new RuntimeException("Failed to send invoice email", e);
         }
     }
 

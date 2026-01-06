@@ -28,6 +28,12 @@ public class Invoice {
     @Column(name = "stripe_invoice_id", nullable = false, unique = true)
     private String stripeInvoiceId;
 
+    @Column(name = "invoice_number")
+    private String invoiceNumber;
+
+    @Column(name = "amount_due")
+    private Long amountDue;
+
     @Column(name = "amount_paid")
     private Long amountPaid;
 
@@ -43,8 +49,13 @@ public class Invoice {
     @Column(name = "hosted_invoice_url")
     private String hostedInvoiceUrl;
 
+    @Column(name = "email_sent")
+    private boolean emailSent;
+
+    @Column(name = "email_scheduled_at")
+    private LocalDateTime emailScheduledAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }
-

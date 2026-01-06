@@ -25,6 +25,7 @@ public class EmailTemplateService {
     private static final String VERIFICATION_TEMPLATE = "verification";
     private static final String PASSWORD_RESET_TEMPLATE = "password-reset";
     private static final String ONBOARDING_TEMPLATE = "onboarding";
+    private static final String INVOICE_TEMPLATE = "invoice";
 
     /**
      * Lädt ein E-Mail-Template basierend auf Locale, Branding und Template-Typ.
@@ -137,6 +138,17 @@ public class EmailTemplateService {
      */
     public String loadOnboardingTemplate(String locale, String branding) {
         return loadTemplate(locale, branding, ONBOARDING_TEMPLATE);
+    }
+
+    /**
+     * Lädt das Rechnungs-E-Mail-Template.
+     *
+     * @param locale   Die Locale
+     * @param branding Das Branding
+     * @return Der Template-Inhalt
+     */
+    public String loadInvoiceTemplate(String locale, String branding) {
+        return loadTemplate(locale, branding, INVOICE_TEMPLATE);
     }
 
     /**
