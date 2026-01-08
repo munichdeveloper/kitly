@@ -16,9 +16,9 @@ services:
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
       - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
       - SPRING_FLYWAY_ENABLED=true
-      - VIRTUAL_HOST=kitly.n8n-instance-manager.de
-      - LETSENCRYPT_HOST=kitly.n8n-instance-manager.de
-      - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
+      - VIRTUAL_HOST=kitly-backend.controla.dev
+      - LETSENCRYPT_HOST=kitly-backend.controla.dev
+      - LETSENCRYPT_EMAIL=johannes.hinkov+letsencrypt@gmail.com
       - FRONTEND_URL=${FRONTEND_URL}
       - FRONTEND_APP_URL=${FRONTEND_APP_URL}
       # E-Mail-Verifizierung
@@ -52,10 +52,10 @@ services:
     expose:
       - "3000"
     environment:
-      - VIRTUAL_HOST=kitly-fe.n8n-instance-manager.de
+      - VIRTUAL_HOST=kitly.controla.dev
       - VIRTUAL_PORT=3000
-      - LETSENCRYPT_HOST=kitly-fe.n8n-instance-manager.de
-      - LETSENCRYPT_EMAIL=johannes.hinkov@gmail.com
+      - LETSENCRYPT_HOST=kitly.controla.dev
+      - LETSENCRYPT_EMAIL=johannes.hinkov+letsencrypt@gmail.com
     depends_on:
       backend:
         condition: service_healthy
