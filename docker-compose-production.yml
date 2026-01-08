@@ -35,6 +35,7 @@ services:
       - EMAIL_BRANDING=${EMAIL_BRANDING:-kitly}
       - EMAIL_PROVIDER=${EMAIL_PROVIDER:-KITLY_MAIL}
       - KITLY_MAIL_API_KEY=${KITLY_MAIL_API_KEY:-change-this-default-api-key}
+      - KITLY_MAIL_URL=${KITLY_MAIL_URL:-http://kitly-mail/api/emails}
     networks:
       - auto-proxy
       - kitly-network
