@@ -33,6 +33,7 @@ services:
       # E-Mail-Template-Konfiguration
       - EMAIL_LOCALE=${EMAIL_LOCALE:-de_DE}
       - EMAIL_BRANDING=${EMAIL_BRANDING:-kitly}
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-KITLY_MAIL}
       - KITLY_MAIL_API_KEY=${KITLY_MAIL_API_KEY:-change-this-default-api-key}
     networks:
       - auto-proxy
