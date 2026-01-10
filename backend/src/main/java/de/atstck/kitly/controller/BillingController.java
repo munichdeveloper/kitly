@@ -1,6 +1,7 @@
 package de.atstck.kitly.controller;
 
 import de.atstck.kitly.dto.CheckoutRequest;
+import de.atstck.kitly.dto.StripePlanResponse;
 import de.atstck.kitly.dto.SubscriptionResponse;
 import de.atstck.kitly.entity.Invoice;
 import de.atstck.kitly.repository.InvoiceRepository;
@@ -62,6 +63,16 @@ public class BillingController {
         try {
             List<Invoice> invoices = invoiceRepository.findByTenantIdOrderByCreatedAtDesc(tenantId);
             return ResponseEntity.ok(invoices);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/plans")
+    public ResponseEntity<?> getAvailablePlans() {
+        try {
+            List<StripePlanResponse> plans = stripeService.getAvailablePlans();
+            return ResponseEntity.ok(plans);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
