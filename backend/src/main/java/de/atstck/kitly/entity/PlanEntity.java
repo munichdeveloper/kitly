@@ -57,6 +57,14 @@ public class PlanEntity {
     private Integer displayOrder;
 
     /**
+     * Stripe validation status
+     * Possible values: active, inactive, stripe_inactive, unavailable, not_configured
+     */
+    @Size(max = 50)
+    @Column(name = "stripe_status")
+    private String stripeStatus;
+
+    /**
      * Entitlements associated with this plan
      */
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -23,6 +23,9 @@ import {
   Invoice,
   ApplicationSettingResponse,
   ApplicationSettingRequest,
+  StripePlanResponse,
+  PlanPriceStatusResponse,
+  PlanActivationRequest,
 } from './types';
 
 // Re-export types for convenience
@@ -466,11 +469,27 @@ export class ApiClient {
     return this.handleResponse<{ message: string; mode: string; configuredPlans: string[]; planCount: number }>(response);
   }
 
-  static async getStripePlanPrices(): Promise<Record<string, string>> {
+  static async getStripePlanPrices(): Promise<PlanPriceStatusResponse[]> {
     const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/plans`, {
       headers: this.getAuthHeader(),
     });
-    return this.handleResponse<Record<string, string>>(response);
+    return this.handleResponse<PlanPriceStatusResponse[]>(response);
+  }
+
+  static async setPlanActivationStatus(planName: string, active: boolean): Promise<PlanPriceStatusResponse> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/plans/activation`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+      body: JSON.stringify({ planName, active }),
+    });
+    return this.handleResponse<PlanPriceStatusResponse>(response);
+  }
+
+  static async getAvailablePlans(): Promise<StripePlanResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/billing/plans`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<StripePlanResponse[]>(response);
   }
 
   // ========== Health Check ==========

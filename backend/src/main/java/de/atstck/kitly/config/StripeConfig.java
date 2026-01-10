@@ -53,7 +53,7 @@ public class StripeConfig {
 
                 // Load dynamic plan prices
                 // Format: stripe.{mode}.plan.{PLAN_NAME} = price_id
-                loadDynamicPlanPrices(mode);
+                loadDynamicPlanPrices();
 
             } catch (Exception e) {
                 log.warn("Could not load platform settings, using default configuration", e);
@@ -67,9 +67,9 @@ public class StripeConfig {
 
     /**
      * Load dynamic plan prices from platform settings
-     * Format: stripe.{mode}.plan.{PLAN_NAME} = price_id
+     * Format: stripe.plan.{PLAN_NAME} = price_id
      */
-    private void loadDynamicPlanPrices(String mode) {
+    private void loadDynamicPlanPrices() {
         if (platformSettingService == null) {
             return;
         }
@@ -85,12 +85,19 @@ public class StripeConfig {
                 String key = entry.getKey();
                 String priceId = entry.getValue();
 
+                // Skip .active settings - those are for activation status, not price IDs
+                if (key.endsWith(".active")) {
+                    continue;
+                }
+
                 // Extract plan name from key: stripe.plan.{PLAN_NAME}
                 if (key.length() > prefix.length()) {
                     String planName = key.substring(prefix.length());
-                    if (priceId != null && !priceId.isEmpty()) {
+                    if (priceId != null && priceId.startsWith("price_")) {
                         planPriceMap.put(planName.toUpperCase(), priceId);
                         log.debug("Loaded dynamic plan price: {} -> {}", planName, priceId);
+                    } else {
+                        log.warn("Skipping invalid price ID for plan {}: {}", planName, priceId);
                     }
                 }
             }

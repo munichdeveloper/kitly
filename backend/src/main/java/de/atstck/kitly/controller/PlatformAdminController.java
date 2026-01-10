@@ -1,12 +1,14 @@
 package de.atstck.kitly.controller;
 
 import de.atstck.kitly.config.StripeConfig;
+import de.atstck.kitly.dto.PlanPriceStatusResponse;
 import de.atstck.kitly.dto.PlatformSettingDTO;
 import de.atstck.kitly.dto.PlatformSettingRequest;
 import de.atstck.kitly.entity.PlatformSetting;
 import de.atstck.kitly.entity.User;
 import de.atstck.kitly.repository.UserRepository;
 import de.atstck.kitly.service.PlatformSettingService;
+import de.atstck.kitly.service.StripeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,7 @@ public class PlatformAdminController {
     private final PlatformSettingService platformSettingService;
     private final StripeConfig stripeConfig;
     private final UserRepository userRepository;
+    private final StripeService stripeService;
 
     @GetMapping
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
@@ -157,10 +160,11 @@ public class PlatformAdminController {
 
     @GetMapping("/stripe/plans")
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
-    public ResponseEntity<Map<String, String>> getAllPlanPrices() {
-        Map<String, String> planPrices = stripeConfig.getAllPlanPrices();
-        return ResponseEntity.ok(planPrices);
+    public ResponseEntity<List<PlanPriceStatusResponse>> getAllPlanPrices() {
+        List<PlanPriceStatusResponse> planStatuses = stripeService.validateAndGetAllPlanPrices();
+        return ResponseEntity.ok(planStatuses);
     }
+
 
     private UUID getUserIdFromAuthentication(Authentication authentication) {
         String username = authentication.getName();

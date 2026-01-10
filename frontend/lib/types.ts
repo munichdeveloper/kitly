@@ -234,3 +234,28 @@ export interface ApplicationSettingRequest {
   isPublic?: boolean;
 }
 
+// Stripe Plan Types
+export interface StripePlanResponse {
+  stripeId: string;
+  planName: string;
+  unitAmount: number;
+  currency: string;
+  interval: string;
+  type: string;
+  formattedPrice: string;
+}
+
+export interface PlanPriceStatusResponse {
+  planName: string;
+  priceId: string;
+  active: boolean;
+  status: 'active' | 'inactive' | 'stripe_inactive' | 'unavailable';
+  priceDetails?: StripePlanResponse;
+  error?: string;
+}
+
+export interface PlanActivationRequest {
+  planName: string;
+  active: boolean;
+}
+
