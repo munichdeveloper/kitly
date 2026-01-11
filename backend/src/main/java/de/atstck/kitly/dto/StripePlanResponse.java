@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class StripePlanResponse {
     private String stripeId;
     private String planName;
+    private String displayName;
     private Long unitAmount;
     private String currency;
     private String interval;
