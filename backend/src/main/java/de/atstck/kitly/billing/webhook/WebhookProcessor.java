@@ -573,7 +573,7 @@ public class WebhookProcessor {
         long createdDate = ((Number) invoiceData.get("created")).longValue();
 
         String formattedAmount = String.format("%.2f", amount / 100.0);
-        String formattedDate = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(
+        String formattedDate = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy").format(
             java.time.LocalDateTime.ofEpochSecond(createdDate, 0, java.time.ZoneOffset.UTC)
         );
 

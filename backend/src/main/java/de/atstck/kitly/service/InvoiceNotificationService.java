@@ -62,7 +62,7 @@ public class InvoiceNotificationService {
         // Invoice entity has createdAt which is DB creation time.
         // We ideally want the date from Stripe, but we didn't store it in Invoice entity except indirectly.
         // Let's use createdAt for now or "today".
-        String formattedDate = java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(
+        String formattedDate = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy").format(
                 invoice.getCreatedAt() != null ? invoice.getCreatedAt() : LocalDateTime.now()
         );
 
