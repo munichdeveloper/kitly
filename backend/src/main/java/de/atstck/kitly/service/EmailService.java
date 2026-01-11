@@ -110,6 +110,7 @@ public class EmailService {
             String template = templateService.loadOnboardingTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
                     "username", username,
+                    "firstName", toName,
                     "planName", planName,
                     "appUrl", frontendAppUrl,
                     "docsUrl", docsUrl
