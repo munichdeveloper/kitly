@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'success';
+  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'outline';
   children: React.ReactNode;
 }
 
@@ -13,6 +13,7 @@ export default function Button({ variant = 'primary', children, className = '', 
     secondary: 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 focus:ring-zinc-600 border border-zinc-700 hover:border-zinc-600 shadow-lg shadow-black/20',
     danger: 'bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-500 hover:to-rose-500 focus:ring-red-500 shadow-lg shadow-red-600/30 hover:shadow-xl hover:shadow-red-600/40',
     success: 'bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-500 hover:to-green-500 focus:ring-emerald-500 shadow-lg shadow-emerald-600/30 hover:shadow-xl hover:shadow-emerald-600/40',
+    outline: 'bg-transparent text-zinc-100 hover:bg-zinc-800 focus:ring-zinc-600 border-2 border-zinc-700 hover:border-zinc-600 shadow-lg shadow-black/20',
   };
 
   return (
