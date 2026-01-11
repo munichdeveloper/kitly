@@ -1,57 +1,48 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nim Invoice</title>
+    <title>Controla - Rechnung</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; line-height: 1.6; color: #e0e0e0; background-color: #0a0a0a; padding: 20px; }
-        .email-container { max-width: 600px; margin: 0 auto; background-color: #1a1a1a; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
-        .header { background-color: #1a1a1a; padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid #2a2a2a; }
-        .logo { font-size: 28px; font-weight: 600; color: #ffffff; letter-spacing: 0.5px; margin-bottom: 10px; }
-        .content { padding: 40px 30px; }
-        h1 { color: #ffffff; font-size: 24px; margin-bottom: 20px; text-align: center; }
-        p { margin-bottom: 20px; font-size: 16px; color: #b0b0b0; }
-        .info-box { background-color: #262626; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; color: #e0e0e0; }
-        .btn-container { text-align: center; margin: 30px 0; }
-        .btn { display: inline-block; background-color: #10b981; color: #000000; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: background-color 0.3s; }
-        .footer { background-color: #141414; padding: 20px; text-align: center; font-size: 12px; color: #666; border-top: 1px solid #2a2a2a; }
-        a { color: #10b981; text-decoration: none; }
+        {{BASE_TEMPLATE}}
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <div class="header">
-            <div class="logo">Controla</div>
-        </div>
-
-        <div class="content">
-            <h1>Neue Rechnung verfügbar</h1>
-            <p>Hallo {{username}},</p>
-            <p>vielen Dank für deine Nutzung von Controla.</p>
-
-            <p>Eine neue Rechnung über <strong>{{amount}} {{currency}}</strong> vom {{date}} ist verfügbar.</p>
-
-            <div class="info-box">
-                <strong>Rechnungsnummer:</strong> {{invoiceNumber}}<br/>
-                <strong>Betrag:</strong> {{amount}} {{currency}}<br/>
-                <strong>Datum:</strong> {{date}}
-            </div>
-
-            <p>Die Rechnung findest du im Anhang dieser E-Mail.</p>
-
-            <div class="btn-container">
-                <a href="{{downloadUrl}}" class="btn">Rechnung herunterladen</a>
-            </div>
-
-            <p>Bei Fragen stehen wir dir gerne unter <a href="{{contactUrl}}">Kontakt</a> zur Verfügung.</p>
-        </div>
-
-        <div class="footer">
-            <p>&copy; 2026 Controla. Alle Rechte vorbehalten.</p>
-        </div>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">Controla</div>
+        <div class="subtitle">Rechnung</div>
     </div>
+
+    <div class="content">
+        <h1>Neue Rechnung verfügbar</h1>
+
+        <p>Hallo {{firstName}},</p>
+
+        <p>vielen Dank für deine Nutzung von Controla.</p>
+
+        <p>Eine neue Rechnung über <strong>{{amount}} {{currency}}</strong> vom {{date}} ist verfügbar.</p>
+
+        <div class="info-box">
+            <strong>Rechnungsnummer:</strong> {{invoiceNumber}}<br/>
+            <strong>Betrag:</strong> {{amount}} {{currency}}<br/>
+            <strong>Datum:</strong> {{date}}
+        </div>
+
+        <p>Die Rechnung findest du im Anhang dieser E-Mail.</p>
+
+        <div class="button-container">
+            <a href="{{downloadUrl}}" class="button">Rechnung herunterladen</a>
+        </div>
+
+        <p>Bei Fragen stehen wir dir gerne unter <a href="{{contactUrl}}">Kontakt</a> zur Verfügung.</p>
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2026 Controla. Alle Rechte vorbehalten.</p>
+    </div>
+</div>
 </body>
 </html>
 

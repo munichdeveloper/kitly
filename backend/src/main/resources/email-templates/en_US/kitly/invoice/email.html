@@ -1,25 +1,25 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Your Invoice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitly - Invoice</title>
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
-        .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-        .content { padding: 30px; background-color: white; }
-        .button { display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
-        .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
-        .info-box { background-color: #EEF2FF; border-left: 4px solid #4F46E5; padding: 15px; margin: 20px 0; }
+        {{BASE_TEMPLATE}}
     </style>
 </head>
 <body>
-<div class="container">
+<div class="email-container">
     <div class="header">
-        <h1>New Invoice Available</h1>
+        <div class="logo">Kitly</div>
+        <div class="subtitle">Invoice</div>
     </div>
+
     <div class="content">
-        <h2>Hello {{username}},</h2>
+        <h1>New Invoice Available</h1>
+
+        <p>Hello {{firstName}},</p>
+
         <p>Thank you for using Kitly.</p>
 
         <p>A new invoice for <strong>{{amount}} {{currency}}</strong> from {{date}} is available.</p>
@@ -32,17 +32,15 @@
 
         <p>You can find the invoice attached to this email.</p>
 
-        <center>
+        <div class="button-container">
             <a href="{{downloadUrl}}" class="button">Download Invoice</a>
-        </center>
+        </div>
 
-        <p>If you have any questions, please contact us at <a href="{{contactUrl}}">Contact Support</a>.</p>
-
-        <p>Thank you for using Kitly!</p>
-        <p>Your Kitly Team</p>
+        <p>If you have any questions, please contact us at <a href="{{contactUrl}}">Support</a>.</p>
     </div>
+
     <div class="footer">
-        <p>&copy; 2026 Kitly. All rights reserved.</p>
+        <p class="footer-text">&copy; 2026 Kitly. All rights reserved.</p>
     </div>
 </div>
 </body>

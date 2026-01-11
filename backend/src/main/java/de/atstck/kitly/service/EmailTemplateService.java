@@ -62,10 +62,52 @@ public class EmailTemplateService {
                 resource = new ClassPathResource(path);
             }
 
-            return resource.getContentAsString(StandardCharsets.UTF_8);
+            String content = resource.getContentAsString(StandardCharsets.UTF_8);
+
+            // Prüfe, ob das Template einen Base-Template-Import enthält
+            return processBaseTemplate(content, branding);
         } catch (IOException e) {
             logger.error("Failed to load email template: {}", path, e);
             throw new RuntimeException("Failed to load email template: " + path, e);
+        }
+    }
+
+    /**
+     * Verarbeitet Base-Template-Imports im Template.
+     * Sucht nach {{BASE_TEMPLATE}} und ersetzt es mit dem entsprechenden Base-Template-CSS.
+     *
+     * @param content  Der Template-Inhalt
+     * @param branding Das Branding (kitly oder nim)
+     * @return Der verarbeitete Template-Inhalt
+     */
+    private String processBaseTemplate(String content, String branding) {
+        if (!content.contains("{{BASE_TEMPLATE}}")) {
+            // Kein Base-Template-Import, gib Content unverändert zurück
+            return content;
+        }
+
+        try {
+            // Bestimme das Base-Template basierend auf dem Branding
+            String baseTemplateName = branding.equals("nim") ? "base-nim.html" : "base-kitly.html";
+            String baseTemplatePath = "email-templates/" + baseTemplateName;
+
+            ClassPathResource baseResource = new ClassPathResource(baseTemplatePath);
+            String baseContent = baseResource.getContentAsString(StandardCharsets.UTF_8);
+
+            // Extrahiere nur den CSS-Teil aus dem Base-Template (zwischen <style> und </style>)
+            int styleStart = baseContent.indexOf("<style>");
+            int styleEnd = baseContent.indexOf("</style>");
+
+            if (styleStart != -1 && styleEnd != -1) {
+                String cssContent = baseContent.substring(styleStart + 7, styleEnd).trim();
+                return content.replace("{{BASE_TEMPLATE}}", cssContent);
+            } else {
+                logger.warn("Could not extract CSS from base template: {}", baseTemplateName);
+                return content.replace("{{BASE_TEMPLATE}}", "/* Base template CSS not found */");
+            }
+        } catch (IOException e) {
+            logger.error("Failed to load base template for branding: {}", branding, e);
+            return content.replace("{{BASE_TEMPLATE}}", "/* Base template loading failed */");
         }
     }
 

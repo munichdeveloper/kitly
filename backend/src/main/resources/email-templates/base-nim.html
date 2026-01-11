@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controla - {{title}}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            background-color: #0a0a0a;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .header {
+            background-color: #1a1a1a;
+            padding: 40px 30px 30px;
+            text-align: center;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #10b981;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 500;
+        }
+
+        .content {
+            padding: 40px 30px;
+            background-color: #1a1a1a;
+        }
+
+        .greeting {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        h3 {
+            font-size: 20px;
+            color: #ffffff;
+            margin: 30px 0 15px;
+            font-weight: 500;
+        }
+
+        .text, p {
+            font-size: 16px;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 35px 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            margin: 0 10px;
+        }
+
+        .button:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .button-secondary {
+            display: inline-block;
+            padding: 14px 40px;
+            background-color: #262626;
+            color: #e0e0e0;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            border: 1px solid #2a2a2a;
+            margin: 0 10px;
+        }
+
+        .button-secondary:hover {
+            background-color: #2f2f2f;
+            border-color: #10b981;
+        }
+
+        .link-box {
+            background-color: #0f0f0f;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 25px 0;
+        }
+
+        .link-label {
+            font-size: 13px;
+            color: #888888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .link-url {
+            word-break: break-all;
+            color: #10b981;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+        }
+
+        .notice, .info-box {
+            background-color: #0f0f0f;
+            border-left: 3px solid #10b981;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 4px;
+            color: #e0e0e0;
+        }
+
+        .info-box strong {
+            color: #ffffff;
+        }
+
+        .notice-text {
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+
+        .notice-highlight {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .success-icon {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .success-icon-circle {
+            display: inline-block;
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 50%;
+            line-height: 80px;
+            font-size: 48px;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .footer {
+            background-color: #0f0f0f;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #2a2a2a;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #666666;
+            margin-bottom: 8px;
+        }
+
+        .footer-brand {
+            font-size: 14px;
+            color: #888888;
+            font-weight: 500;
+        }
+
+        .footer-brand span {
+            color: #10b981;
+        }
+
+        a {
+            color: #10b981;
+            text-decoration: none;
+        }
+
+        strong {
+            color: #ffffff;
+        }
+
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .header, .content, .footer {
+                padding: 25px 20px;
+            }
+
+            .greeting, h1, h2 {
+                font-size: 20px;
+            }
+
+            h3 {
+                font-size: 18px;
+            }
+
+            .text, p {
+                font-size: 15px;
+            }
+
+            .button, .button-secondary {
+                display: block;
+                margin: 10px auto;
+                padding: 12px 30px;
+                font-size: 15px;
+            }
+
+            .success-icon-circle {
+                width: 60px;
+                height: 60px;
+                line-height: 60px;
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">Controla</div>
+        <div class="subtitle">{{subtitle}}</div>
+    </div>
+
+    <div class="content">
+        {{content}}
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2026 Controla. {{footerRights}}</p>
+    </div>
+</div>
+</body>
+</html>
+
