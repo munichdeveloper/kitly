@@ -1,5 +1,6 @@
 package de.atstck.kitly.integration.builder;
 
+import de.atstck.kitly.entity.PlanEntity;
 import de.atstck.kitly.entity.Subscription;
 import de.atstck.kitly.entity.Tenant;
 
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 public class SubscriptionTestBuilder {
     
     private Tenant tenant;
-    private Subscription.SubscriptionPlan plan = Subscription.SubscriptionPlan.FREE;
+    private PlanEntity plan;
     private Subscription.SubscriptionStatus status = Subscription.SubscriptionStatus.TRIALING;
     private Subscription.BillingCycle billingCycle;
     private BigDecimal amount;
@@ -31,7 +32,7 @@ public class SubscriptionTestBuilder {
         return this;
     }
     
-    public SubscriptionTestBuilder withPlan(Subscription.SubscriptionPlan plan) {
+    public SubscriptionTestBuilder withPlan(PlanEntity plan) {
         this.plan = plan;
         return this;
     }

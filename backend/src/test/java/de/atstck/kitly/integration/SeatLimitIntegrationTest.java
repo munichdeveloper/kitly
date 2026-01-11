@@ -2,6 +2,7 @@ package de.atstck.kitly.integration;
 
 import de.atstck.kitly.entity.*;
 import de.atstck.kitly.integration.builder.MembershipTestBuilder;
+import de.atstck.kitly.integration.builder.PlanEntityTestBuilder;
 import de.atstck.kitly.integration.builder.SubscriptionTestBuilder;
 import de.atstck.kitly.integration.builder.TenantTestBuilder;
 import de.atstck.kitly.integration.builder.UserTestBuilder;
@@ -24,6 +25,9 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
     private User owner;
     private Tenant tenant;
     private Subscription subscription;
+    private PlanEntity freePlan;
+    private PlanEntity starterPlan;
+    private PlanEntity enterprisePlan;
 
     @BeforeEach
     void setUp() {
@@ -32,6 +36,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         subscriptionRepository.deleteAll();
         tenantRepository.deleteAll();
         userRepository.deleteAll();
+        planRepository.deleteAll();
 
         // Get or create default role
         userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
@@ -40,6 +45,31 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
                     role.setName(Role.RoleName.ROLE_USER);
                     return roleRepository.save(role);
                 });
+
+        // Create plans
+        freePlan = PlanEntityTestBuilder.aPlanEntity()
+                .withCode("free")
+                .withName("Free Plan")
+                .withDescription("Free plan with 3 seats")
+                .withIsActive(true)
+                .build();
+        freePlan = planRepository.save(freePlan);
+
+        starterPlan = PlanEntityTestBuilder.aPlanEntity()
+                .withCode("starter")
+                .withName("Starter Plan")
+                .withDescription("Starter plan with 10 seats")
+                .withIsActive(true)
+                .build();
+        starterPlan = planRepository.save(starterPlan);
+
+        enterprisePlan = PlanEntityTestBuilder.aPlanEntity()
+                .withCode("enterprise")
+                .withName("Enterprise Plan")
+                .withDescription("Enterprise plan with unlimited seats")
+                .withIsActive(true)
+                .build();
+        enterprisePlan = planRepository.save(enterprisePlan);
 
         // Create owner user
         owner = UserTestBuilder.aUser()
@@ -71,7 +101,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         // Given - Subscription with 3 seats
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withPlan(freePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(3)
                 .build();
@@ -94,7 +124,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         // Given - Subscription with 3 seats, already has 3 members
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withPlan(freePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(3)
                 .build();
@@ -133,7 +163,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         // Given - Enterprise subscription with unlimited seats
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.ENTERPRISE)
+                .withPlan(enterprisePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(null) // Unlimited
                 .build();
@@ -151,7 +181,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         // Given - Subscription with 3 seats, 3 members
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withPlan(freePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(3)
                 .build();
@@ -195,7 +225,7 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
         // Given - Member with SUSPENDED status
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withPlan(freePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(3)
                 .build();
@@ -230,13 +260,13 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
     void whenDifferentPlans_thenDifferentSeatLimits() {
         // Test different plan seat limits
 
-        // FREE plan - 3 seats (maxSeats wird automatisch durch @PrePersist gesetzt)
+        // FREE plan - 3 seats
         Subscription freeSub = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
-                .withMaxSeats(null) // Wichtig: null setzen, damit @PrePersist die Default-Werte setzt
+                .withPlan(freePlan)
+                .withMaxSeats(3)
                 .build();
-        freeSub = subscriptionRepository.save(freeSub); // Speichern, um @PrePersist auszulösen
+        freeSub = subscriptionRepository.save(freeSub);
         assertThat(freeSub.getMaxSeats()).isEqualTo(3);
 
         // Create a new tenant for STARTER plan
@@ -254,13 +284,13 @@ public class SeatLimitIntegrationTest extends BaseIntegrationTest {
                 .build();
         tenant2 = tenantRepository.save(tenant2);
 
-        // STARTER plan - 10 seats (maxSeats wird automatisch durch @PrePersist gesetzt)
+        // STARTER plan - 10 seats
         Subscription starterSub = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant2)
-                .withPlan(Subscription.SubscriptionPlan.STARTER)
-                .withMaxSeats(null) // Wichtig: null setzen, damit @PrePersist die Default-Werte setzt
+                .withPlan(starterPlan)
+                .withMaxSeats(10)
                 .build();
-        starterSub = subscriptionRepository.save(starterSub); // Speichern, um @PrePersist auszulösen
+        starterSub = subscriptionRepository.save(starterSub);
         assertThat(starterSub.getMaxSeats()).isEqualTo(10);
     }
 }

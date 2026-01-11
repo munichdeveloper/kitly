@@ -43,7 +43,8 @@ class EntitlementServiceTest {
     private UUID testTenantId;
     private Tenant testTenant;
     private Subscription testSubscription;
-    
+    private PlanEntity mockPlan;
+
     @BeforeEach
     void setUp() {
         testTenantId = UUID.randomUUID();
@@ -54,11 +55,17 @@ class EntitlementServiceTest {
                 .slug("test-tenant")
                 .status(Tenant.TenantStatus.ACTIVE)
                 .build();
-        
+
+        mockPlan = PlanEntity.builder()
+                .id(UUID.randomUUID())
+                .code("business")
+                .name("Business Plan")
+                .build();
+
         testSubscription = Subscription.builder()
                 .id(UUID.randomUUID())
                 .tenant(testTenant)
-                .plan(Subscription.SubscriptionPlan.BUSINESS)
+                .plan(mockPlan)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
                 .maxSeats(50)
                 .build();
@@ -159,8 +166,13 @@ class EntitlementServiceTest {
     @Test
     void testComputeEntitlements_WithStarterPlan() {
         // Given
-        testSubscription.setPlan(Subscription.SubscriptionPlan.STARTER);
-        
+        PlanEntity starterPlan = PlanEntity.builder()
+                .id(UUID.randomUUID())
+                .code("starter")
+                .name("Starter Plan")
+                .build();
+        testSubscription.setPlan(starterPlan);
+
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
         when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(testSubscription));

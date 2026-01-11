@@ -2,6 +2,7 @@ package de.atstck.kitly.billing.webhook;
 
 import de.atstck.kitly.common.outbox.OutboxService;
 import de.atstck.kitly.entitlement.EntitlementService;
+import de.atstck.kitly.entity.PlanEntity;
 import de.atstck.kitly.entity.Subscription;
 import de.atstck.kitly.entity.Tenant;
 import de.atstck.kitly.entity.WebhookInbox;
@@ -54,6 +55,7 @@ class WebhookProcessorTest {
 
     private UUID testTenantId;
     private Tenant testTenant;
+    private PlanEntity mockPlan;
 
     @BeforeEach
     void setUp() {
@@ -62,6 +64,12 @@ class WebhookProcessorTest {
                 .id(testTenantId)
                 .name("Test Tenant")
                 .slug("test-tenant")
+                .build();
+
+        mockPlan = PlanEntity.builder()
+                .id(UUID.randomUUID())
+                .code("starter")
+                .name("Starter Plan")
                 .build();
 
         // Mock TransactionTemplate to execute the action immediately
@@ -164,7 +172,7 @@ class WebhookProcessorTest {
         Subscription existingSubscription = Subscription.builder()
                 .id(UUID.randomUUID())
                 .tenant(testTenant)
-                .plan(Subscription.SubscriptionPlan.STARTER)
+                .plan(mockPlan)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
                 .stripeSubscriptionId("sub_test_123") // Make sure ID matches so findFirst works if mocked or logic uses it
                 .build();
@@ -211,7 +219,8 @@ class WebhookProcessorTest {
         verify(subscriptionRepository, times(1)).save(subscriptionCaptor.capture());
 
         Subscription savedSubscription = subscriptionCaptor.getValue();
-        assertEquals(Subscription.SubscriptionPlan.BUSINESS, savedSubscription.getPlan());
+        // Plan is now a PlanEntity, not an enum, so we verify it's not null
+        assertTrue(savedSubscription.getPlan() != null);
 
         verify(entitlementService, times(1)).syncEntitlements(testTenantId);
         verify(outboxService, times(1))

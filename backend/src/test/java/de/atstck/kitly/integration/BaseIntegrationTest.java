@@ -61,6 +61,9 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected EntitlementVersionRepository entitlementVersionRepository;
 
+    @Autowired
+    protected PlanRepository planRepository;
+
     @BeforeEach
     void baseSetup() {
         // Ensure database is clean before each test

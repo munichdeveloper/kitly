@@ -1,6 +1,7 @@
 package de.atstck.kitly.integration;
 
 import de.atstck.kitly.entity.*;
+import de.atstck.kitly.integration.builder.PlanEntityTestBuilder;
 import de.atstck.kitly.integration.builder.UserTestBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,7 @@ public class TenantCreationIntegrationTest extends BaseIntegrationTest {
 
     private Role userRole;
     private User testUser;
+    private PlanEntity freePlan;
 
     @BeforeEach
     void setUp() {
@@ -30,6 +32,7 @@ public class TenantCreationIntegrationTest extends BaseIntegrationTest {
         subscriptionRepository.deleteAll();
         tenantRepository.deleteAll();
         userRepository.deleteAll();
+        planRepository.deleteAll();
 
         // Get or create default role
         userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
@@ -38,6 +41,15 @@ public class TenantCreationIntegrationTest extends BaseIntegrationTest {
                     role.setName(Role.RoleName.ROLE_USER);
                     return roleRepository.save(role);
                 });
+
+        // Create plan
+        freePlan = PlanEntityTestBuilder.aPlanEntity()
+                .withCode("free")
+                .withName("Free Plan")
+                .withDescription("Free plan with 3 seats")
+                .withIsActive(true)
+                .build();
+        freePlan = planRepository.save(freePlan);
 
         // Create test user
         testUser = UserTestBuilder.aUser()
@@ -102,11 +114,12 @@ public class TenantCreationIntegrationTest extends BaseIntegrationTest {
         // Create default subscription
         Subscription subscription = Subscription.builder()
                 .tenant(tenant)
-                .plan(Subscription.SubscriptionPlan.FREE)
+                .plan(freePlan)
                 .status(Subscription.SubscriptionStatus.TRIALING)
                 .startsAt(java.time.LocalDateTime.now())
                 .trialEndsAt(java.time.LocalDateTime.now().plusDays(14))
                 .currency("USD")
+                .maxSeats(3) // Default for FREE plan
                 .build();
         subscriptionRepository.save(subscription);
 
@@ -115,7 +128,7 @@ public class TenantCreationIntegrationTest extends BaseIntegrationTest {
         assertThat(subscriptions).hasSize(1);
 
         Subscription defaultSubscription = subscriptions.get(0);
-        assertThat(defaultSubscription.getPlan()).isEqualTo(Subscription.SubscriptionPlan.FREE);
+        assertThat(defaultSubscription.getPlan().getCode()).isEqualTo("free");
         assertThat(defaultSubscription.getStatus()).isEqualTo(Subscription.SubscriptionStatus.TRIALING);
         assertThat(defaultSubscription.getMaxSeats()).isEqualTo(3); // Default for FREE plan
         assertThat(defaultSubscription.getCurrency()).isEqualTo("USD");

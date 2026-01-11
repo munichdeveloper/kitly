@@ -2,6 +2,7 @@ package de.atstck.kitly.integration;
 
 import de.atstck.kitly.entity.*;
 import de.atstck.kitly.integration.builder.MembershipTestBuilder;
+import de.atstck.kitly.integration.builder.PlanEntityTestBuilder;
 import de.atstck.kitly.integration.builder.SubscriptionTestBuilder;
 import de.atstck.kitly.integration.builder.TenantTestBuilder;
 import de.atstck.kitly.integration.builder.UserTestBuilder;
@@ -33,6 +34,7 @@ public class InviteFlowIntegrationTest extends BaseIntegrationTest {
     private User owner;
     private Tenant tenant;
     private Subscription subscription;
+    private PlanEntity freePlan;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @BeforeEach
@@ -44,6 +46,7 @@ public class InviteFlowIntegrationTest extends BaseIntegrationTest {
         entitlementVersionRepository.deleteAll();
         tenantRepository.deleteAll();
         userRepository.deleteAll();
+        planRepository.deleteAll();
 
         // Get or create default role
         userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
@@ -52,6 +55,15 @@ public class InviteFlowIntegrationTest extends BaseIntegrationTest {
                     role.setName(Role.RoleName.ROLE_USER);
                     return roleRepository.save(role);
                 });
+
+        // Create plan
+        freePlan = PlanEntityTestBuilder.aPlanEntity()
+                .withCode("free")
+                .withName("Free Plan")
+                .withDescription("Free plan with 3 seats")
+                .withIsActive(true)
+                .build();
+        freePlan = planRepository.save(freePlan);
 
         // Create owner user
         owner = UserTestBuilder.aUser()
@@ -80,7 +92,7 @@ public class InviteFlowIntegrationTest extends BaseIntegrationTest {
         // Create subscription with seat limit
         subscription = SubscriptionTestBuilder.aSubscription()
                 .withTenant(tenant)
-                .withPlan(Subscription.SubscriptionPlan.FREE)
+                .withPlan(freePlan)
                 .withStatus(Subscription.SubscriptionStatus.ACTIVE)
                 .withMaxSeats(3)
                 .build();
