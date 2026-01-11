@@ -2,8 +2,10 @@ package de.atstck.kitly.service;
 
 import de.atstck.kitly.common.exception.ResourceNotFoundException;
 import de.atstck.kitly.common.outbox.OutboxService;
+import de.atstck.kitly.entity.PlanEntity;
 import de.atstck.kitly.entity.Subscription;
 import de.atstck.kitly.entity.Tenant;
+import de.atstck.kitly.entitlement.PlanService;
 import de.atstck.kitly.repository.SubscriptionRepository;
 import de.atstck.kitly.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,18 +30,21 @@ public class BillingService {
     private final TenantRepository tenantRepository;
     private final OutboxService outboxService;
     private final ApplicationEventPublisher eventPublisher;
-    
+    private final PlanService planService;
+
     /**
      * Create a new subscription for a tenant
      */
     @Transactional
-    public Subscription createSubscription(UUID tenantId, Subscription.SubscriptionPlan plan, 
+    public Subscription createSubscription(UUID tenantId, String planCode,
                                           Subscription.BillingCycle billingCycle, Integer maxSeats) {
-        log.info("Creating subscription for tenant: {}, plan: {}", tenantId, plan);
-        
+        log.info("Creating subscription for tenant: {}, plan: {}", tenantId, planCode);
+
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         
+        PlanEntity plan = planService.getPlan(planCode);
+
         // Check if active subscription exists
         subscriptionRepository.findByTenantIdAndStatus(tenantId, Subscription.SubscriptionStatus.ACTIVE)
                 .ifPresent(existing -> {
@@ -69,13 +74,15 @@ public class BillingService {
      * Update an existing subscription
      */
     @Transactional
-    public Subscription updateSubscription(UUID subscriptionId, Subscription.SubscriptionPlan plan, 
+    public Subscription updateSubscription(UUID subscriptionId, String planCode,
                                           Subscription.BillingCycle billingCycle, Integer maxSeats) {
         log.info("Updating subscription: {}", subscriptionId);
         
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
         
+        PlanEntity plan = planService.getPlan(planCode);
+
         subscription.setPlan(plan);
         subscription.setBillingCycle(billingCycle);
         subscription.setAmount(calculateAmount(plan, billingCycle));
@@ -89,9 +96,7 @@ public class BillingService {
         return updated;
     }
     
-    /**
-     * Cancel a subscription
-     */
+    // ...existing code...
     @Transactional
     public Subscription cancelSubscription(UUID subscriptionId) {
         log.info("Cancelling subscription: {}", subscriptionId);
@@ -135,21 +140,28 @@ public class BillingService {
     
     /**
      * Calculate subscription amount based on plan and billing cycle
+     * Note: This is a fallback calculation. In production, prices should come from Stripe.
      */
-    private BigDecimal calculateAmount(Subscription.SubscriptionPlan plan, Subscription.BillingCycle billingCycle) {
-        BigDecimal monthlyAmount = switch (plan) {
-            case FREE -> BigDecimal.ZERO;
-            case STARTER -> new BigDecimal("29.00");
-            case BUSINESS -> new BigDecimal("99.00");
-            case ENTERPRISE -> new BigDecimal("299.00");
-        };
-        
-        if (billingCycle == Subscription.BillingCycle.YEARLY) {
-            // Apply 20% discount for yearly billing
-            return monthlyAmount.multiply(new BigDecimal("12")).multiply(new BigDecimal("0.8"));
+    private BigDecimal calculateAmount(PlanEntity plan, Subscription.BillingCycle billingCycle) {
+        // TODO: Get price from Stripe API instead of hardcoded values
+        // For now, return a placeholder or fetch from plan metadata
+
+        // Try to get price from plan metadata if available
+        if (plan.getMetadata() != null && plan.getMetadata().containsKey("monthlyPrice")) {
+            Object priceObj = plan.getMetadata().get("monthlyPrice");
+            BigDecimal monthlyAmount = new BigDecimal(priceObj.toString());
+
+            if (billingCycle == Subscription.BillingCycle.YEARLY) {
+                // Apply 20% discount for yearly billing
+                return monthlyAmount.multiply(new BigDecimal("12")).multiply(new BigDecimal("0.8"));
+            }
+
+            return monthlyAmount;
         }
-        
-        return monthlyAmount;
+
+        // Fallback to zero if no price is configured
+        log.warn("No price configured for plan: {}, using 0.00", plan.getCode());
+        return BigDecimal.ZERO;
     }
     
     /**
@@ -159,7 +171,8 @@ public class BillingService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("subscriptionId", subscription.getId().toString());
         payload.put("tenantId", subscription.getTenant().getId().toString());
-        payload.put("plan", subscription.getPlan().toString());
+        payload.put("planCode", subscription.getPlanCode());
+        payload.put("planName", subscription.getPlanName());
         payload.put("status", subscription.getStatus().toString());
         payload.put("amount", subscription.getAmount() != null ? subscription.getAmount().toString() : null);
         payload.put("currency", subscription.getCurrency());

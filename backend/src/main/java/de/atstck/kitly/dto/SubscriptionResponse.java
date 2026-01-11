@@ -17,7 +17,8 @@ import java.util.UUID;
 public class SubscriptionResponse {
     private UUID id;
     private UUID tenantId;
-    private Subscription.SubscriptionPlan plan;
+    private String planCode;
+    private String planName;
     private Subscription.SubscriptionStatus status;
     private Subscription.BillingCycle billingCycle;
     private BigDecimal amount;

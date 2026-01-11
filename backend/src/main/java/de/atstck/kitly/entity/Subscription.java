@@ -26,11 +26,13 @@ public class Subscription {
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private SubscriptionPlan plan = SubscriptionPlan.FREE;
-    
+    /**
+     * Reference to the dynamic plan from the plans table
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "plan_id", nullable = false)
+    private PlanEntity plan;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -85,22 +87,11 @@ public class Subscription {
         if (startsAt == null) {
             startsAt = LocalDateTime.now();
         }
-        // Set default max seats based on plan
-        if (maxSeats == null) {
-            maxSeats = getDefaultMaxSeats(plan);
-        }
     }
     
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-    }
-    
-    public enum SubscriptionPlan {
-        FREE,
-        STARTER,
-        BUSINESS,
-        ENTERPRISE
     }
     
     public enum SubscriptionStatus {
@@ -116,12 +107,17 @@ public class Subscription {
         YEARLY
     }
     
-    private Integer getDefaultMaxSeats(SubscriptionPlan plan) {
-        return switch (plan) {
-            case FREE -> 3;
-            case STARTER -> 10;
-            case BUSINESS -> 50;
-            case ENTERPRISE -> null; // Unlimited
-        };
+    /**
+     * Helper method to get plan code for backward compatibility
+     */
+    public String getPlanCode() {
+        return plan != null ? plan.getCode() : null;
+    }
+
+    /**
+     * Helper method to get plan name for backward compatibility
+     */
+    public String getPlanName() {
+        return plan != null ? plan.getName() : null;
     }
 }

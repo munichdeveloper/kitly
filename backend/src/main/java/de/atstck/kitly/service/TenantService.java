@@ -3,11 +3,8 @@ package de.atstck.kitly.service;
 import de.atstck.kitly.common.context.TenantContextHolder;
 import de.atstck.kitly.dto.TenantRequest;
 import de.atstck.kitly.dto.TenantResponse;
-import de.atstck.kitly.entity.Membership;
-import de.atstck.kitly.entity.Subscription;
-import de.atstck.kitly.entity.Tenant;
-import de.atstck.kitly.entity.User;
-import de.atstck.kitly.entity.EntitlementVersion;
+import de.atstck.kitly.entitlement.PlanService;
+import de.atstck.kitly.entity.*;
 import de.atstck.kitly.common.exception.BadRequestException;
 import de.atstck.kitly.common.exception.ResourceNotFoundException;
 import de.atstck.kitly.common.exception.UnauthorizedException;
@@ -32,17 +29,20 @@ public class TenantService {
     private final MembershipRepository membershipRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final EntitlementVersionRepository entitlementVersionRepository;
+    private final PlanService planService;
 
     public TenantService(TenantRepository tenantRepository, 
                         UserRepository userRepository,
                         MembershipRepository membershipRepository,
                         SubscriptionRepository subscriptionRepository,
-                        EntitlementVersionRepository entitlementVersionRepository) {
+                        EntitlementVersionRepository entitlementVersionRepository,
+                        PlanService planService) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.entitlementVersionRepository = entitlementVersionRepository;
+        this.planService = planService;
     }
     
     @Transactional
@@ -77,10 +77,19 @@ public class TenantService {
         
         membershipRepository.save(membership);
         
+        // Get the FREE plan (or default plan)
+        PlanEntity freePlan;
+        try {
+            freePlan = planService.getPlan("FREE");
+        } catch (Exception e) {
+            // If FREE plan doesn't exist, try to get the first active plan or fail
+            throw new IllegalStateException("No FREE plan found. Please create a FREE plan first.", e);
+        }
+
         // Create default subscription with TRIALING status
         Subscription subscription = Subscription.builder()
                 .tenant(tenant)
-                .plan(Subscription.SubscriptionPlan.FREE)
+                .plan(freePlan)
                 .status(Subscription.SubscriptionStatus.TRIALING)
                 .startsAt(LocalDateTime.now())
                 .trialEndsAt(LocalDateTime.now().plusDays(14))

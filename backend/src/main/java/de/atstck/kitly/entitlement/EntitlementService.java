@@ -48,9 +48,14 @@ public class EntitlementService {
         // Get active subscription
         Subscription subscription = getActiveSubscription(tenantId);
         
-        // Get plan entitlements
-        String planCode = mapSubscriptionPlanToPlanCode(subscription.getPlan());
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode);
+        // Get plan code from subscription's PlanEntity
+        String planCode = subscription.getPlanCode();
+        if (planCode == null) {
+            throw new IllegalStateException("Subscription has no plan assigned");
+        }
+
+        // Get plan entitlements from catalog
+        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode.toLowerCase());
         if (plan == null) {
             throw new IllegalStateException("Invalid plan code: " + planCode);
         }
@@ -118,9 +123,14 @@ public class EntitlementService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
 
         Subscription subscription = getActiveSubscription(tenantId);
-        String planCode = mapSubscriptionPlanToPlanCode(subscription.getPlan());
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode);
 
+        // Get plan code from subscription's PlanEntity
+        String planCode = subscription.getPlanCode();
+        if (planCode == null) {
+            return; // No plan assigned
+        }
+
+        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode.toLowerCase());
         if (plan == null) {
             return;
         }
@@ -210,19 +220,6 @@ public class EntitlementService {
                 .or(() -> subscriptionRepository.findByTenantIdAndStatus(
                         tenantId, Subscription.SubscriptionStatus.TRIALING))
                 .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
-    }
-    
-    /**
-     * Map Subscription.SubscriptionPlan enum to plan catalog code
-     * Note: FREE plan maps to 'starter' as it uses the same entitlements
-     */
-    private String mapSubscriptionPlanToPlanCode(Subscription.SubscriptionPlan plan) {
-        return switch (plan) {
-            case STARTER -> "starter";
-            case BUSINESS -> "business";
-            case ENTERPRISE -> "enterprise";
-            case FREE -> "starter"; // FREE uses starter entitlements
-        };
     }
     
     /**

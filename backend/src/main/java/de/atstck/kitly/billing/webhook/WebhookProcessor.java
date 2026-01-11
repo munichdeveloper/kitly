@@ -3,7 +3,9 @@ package de.atstck.kitly.billing.webhook;
 import de.atstck.kitly.common.outbox.OutboxService;
 import de.atstck.kitly.config.StripeConfig;
 import de.atstck.kitly.entitlement.EntitlementService;
+import de.atstck.kitly.entitlement.PlanService;
 import de.atstck.kitly.entity.Invoice;
+import de.atstck.kitly.entity.PlanEntity;
 import de.atstck.kitly.entity.Subscription;
 import de.atstck.kitly.entity.Tenant;
 import de.atstck.kitly.entity.WebhookInbox;
@@ -59,6 +61,7 @@ public class WebhookProcessor {
     private final OutboxService outboxService;
     private final StripeConfig stripeConfig;
     private final EmailService emailService;
+    private final PlanService planService;
     private final TransactionTemplate transactionTemplate;
 
     // Custom exception for retry logic
@@ -77,6 +80,7 @@ public class WebhookProcessor {
             OutboxService outboxService,
             StripeConfig stripeConfig,
             EmailService emailService,
+            PlanService planService,
             TransactionTemplate transactionTemplate) {
         this.webhookInboxRepository = webhookInboxRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -86,6 +90,7 @@ public class WebhookProcessor {
         this.outboxService = outboxService;
         this.stripeConfig = stripeConfig;
         this.emailService = emailService;
+        this.planService = planService;
         this.transactionTemplate = transactionTemplate;
     }
 
@@ -292,29 +297,37 @@ public class WebhookProcessor {
                 Map<String, Object> firstItem = dataItems.get(0);
                 Map<String, Object> price = (Map<String, Object>) firstItem.get("price");
                 if (price != null) {
-                    boolean planSetByPriceId = false;
+                    String planCode = null;
 
                     // Try to match by Price ID first
                     String priceId = (String) price.get("id");
                     if (priceId != null) {
-                        String planName = stripeConfig.getPlanForPriceId(priceId);
-                        if (planName != null) {
-                            try {
-                                subscription.setPlan(Subscription.SubscriptionPlan.valueOf(planName));
-                                planSetByPriceId = true;
-                            } catch (IllegalArgumentException e) {
-                                logger.warn("Unknown plan name from price ID: {}", planName);
-                            }
+                        planCode = stripeConfig.getPlanForPriceId(priceId);
+                    }
+
+                    // Fallback to metadata if plan was not found by ID
+                    if (planCode == null) {
+                        Map<String, Object> priceMetadata = (Map<String, Object>) price.get("metadata");
+                        if (priceMetadata != null && priceMetadata.containsKey("plan")) {
+                            planCode = (String) priceMetadata.get("plan");
+                        }
+                        // Also check subscription metadata
+                        if (planCode == null && metadata != null && metadata.containsKey("plan_code")) {
+                            planCode = (String) metadata.get("plan_code");
                         }
                     }
 
-                    // Fallback to metadata if plan was not set by ID
-                    if (!planSetByPriceId) {
-                        Map<String, Object> priceMetadata = (Map<String, Object>) price.get("metadata");
-                        if (priceMetadata != null && priceMetadata.containsKey("plan")) {
-                            String planName = (String) priceMetadata.get("plan");
-                            subscription.setPlan(mapPlanName(planName));
+                    // Set plan if found
+                    if (planCode != null) {
+                        try {
+                            PlanEntity plan = planService.getPlan(planCode);
+                            subscription.setPlan(plan);
+                            logger.info("Set plan {} for subscription", planCode);
+                        } catch (Exception e) {
+                            logger.warn("Could not find plan with code: {}", planCode, e);
                         }
+                    } else {
+                        logger.warn("No plan code found in price metadata or subscription metadata");
                     }
                 }
             }
@@ -358,7 +371,8 @@ public class WebhookProcessor {
         // Publish outbox event
         Map<String, Object> eventPayload = new HashMap<>();
         eventPayload.put("tenantId", tenantId.toString());
-        eventPayload.put("plan", subscription.getPlan().name());
+        eventPayload.put("planCode", subscription.getPlanCode());
+        eventPayload.put("planName", subscription.getPlanName());
         eventPayload.put("status", subscription.getStatus().name());
 
         outboxService.publish("EntitlementsChanged", "Tenant", tenantId, eventPayload);
@@ -618,14 +632,6 @@ public class WebhookProcessor {
         };
     }
 
-    private Subscription.SubscriptionPlan mapPlanName(String planName) {
-        return switch (planName.toLowerCase()) {
-            case "starter" -> Subscription.SubscriptionPlan.STARTER;
-            case "business" -> Subscription.SubscriptionPlan.BUSINESS;
-            case "enterprise" -> Subscription.SubscriptionPlan.ENTERPRISE;
-            default -> Subscription.SubscriptionPlan.FREE;
-        };
-    }
 
     /**
      * Sendet eine Onboarding-E-Mail an den Tenant-Owner nach erfolgreicher Zahlung
@@ -640,7 +646,8 @@ public class WebhookProcessor {
 
             String ownerEmail = tenant.getOwner().getEmail();
             String ownerUsername = tenant.getOwner().getUsername();
-            String planName = subscription.getPlan() != null ? subscription.getPlan().name() : "Unknown";
+            String planName = subscription.getPlanName() != null ? subscription.getPlanName() :
+                             (subscription.getPlanCode() != null ? subscription.getPlanCode() : "Unknown");
             String ownerName = tenant.getOwner().getFirstName() != null ? tenant.getOwner().getFirstName() : ownerUsername;
 
             emailService.sendOnboardingEmail(ownerEmail, ownerName, ownerUsername, planName);

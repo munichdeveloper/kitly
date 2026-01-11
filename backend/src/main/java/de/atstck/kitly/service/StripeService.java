@@ -47,14 +47,17 @@ public class StripeService {
         this.planService = planService;
     }
 
-    public String createCheckoutSession(UUID tenantId, String username, Subscription.SubscriptionPlan plan) throws StripeException {
+    public String createCheckoutSession(UUID tenantId, String username, String planCode) throws StripeException {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String priceId = getPriceIdForPlan(plan);
+        String priceId = stripeConfig.getPriceIdForPlan(planCode);
+        if (priceId == null) {
+            throw new IllegalArgumentException("No price ID configured for plan: " + planCode);
+        }
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
@@ -70,32 +73,17 @@ public class StripeService {
                 .setSubscriptionData(
                         SessionCreateParams.SubscriptionData.builder()
                                 .putMetadata("tenant_id", tenant.getId().toString())
+                                .putMetadata("plan_code", planCode)
                                 .build()
                 )
                 .putMetadata("tenant_id", tenant.getId().toString())
+                .putMetadata("plan_code", planCode)
                 .build();
 
         Session session = Session.create(params);
         return session.getUrl();
     }
 
-    public String createPortalSession(String customerId) throws StripeException {
-        var params = builder()
-                .setCustomer(customerId)
-                .setReturnUrl(frontendUrl + "/confirm")
-                .build();
-
-        var session = create(params);
-        return session.getUrl();
-    }
-
-    private String getPriceIdForPlan(Subscription.SubscriptionPlan plan) {
-        String priceId = stripeConfig.getPriceIdForPlan(plan.name());
-        if (priceId == null) {
-            throw new IllegalArgumentException("No price ID configured for plan: " + plan);
-        }
-        return priceId;
-    }
 
 
     /**

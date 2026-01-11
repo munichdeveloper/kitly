@@ -1,6 +1,6 @@
 package de.atstck.kitly.dto;
 
-import de.atstck.kitly.entity.Subscription;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -11,7 +11,7 @@ public class CheckoutRequest {
     @NotNull
     private UUID tenantId;
 
-    @NotNull
-    private Subscription.SubscriptionPlan plan;
+    @NotBlank
+    private String planCode;
 }
 
