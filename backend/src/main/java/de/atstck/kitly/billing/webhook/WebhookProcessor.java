@@ -14,6 +14,7 @@ import de.atstck.kitly.repository.SubscriptionRepository;
 import de.atstck.kitly.repository.TenantRepository;
 import de.atstck.kitly.repository.WebhookInboxRepository;
 import de.atstck.kitly.service.EmailService;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,9 +31,9 @@ import java.util.*;
  * Processes pending webhooks on a schedule and updates subscription/entitlements.
  */
 @Service
+@Slf4j
 public class WebhookProcessor {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebhookProcessor.class);
     private static final Set<String> SUPPORTED_EVENTS = Set.of(
             "customer.subscription.created",
             "customer.subscription.updated",
@@ -107,14 +108,14 @@ public class WebhookProcessor {
             return;
         }
 
-        logger.info("Processing {} pending webhooks", pendingWebhooks.size());
+        log.info("Processing {} pending webhooks", pendingWebhooks.size());
 
         for (WebhookInbox webhook : pendingWebhooks) {
             try {
                 // Process each webhook in its own transaction
                 transactionTemplate.executeWithoutResult(status -> processWebhook(webhook));
             } catch (Exception e) {
-                logger.error("Unexpected error executing webhook transaction for {}", webhook.getEventId(), e);
+                log.error("Unexpected error executing webhook transaction for {}", webhook.getEventId(), e);
             }
         }
     }
@@ -127,7 +128,7 @@ public class WebhookProcessor {
             String eventType = webhook.getEventType();
 
             if (!SUPPORTED_EVENTS.contains(eventType)) {
-                logger.info("Skipping unsupported event type: {}", eventType);
+                log.info("Skipping unsupported event type: {}", eventType);
                 webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSED);
                 webhook.setProcessedAt(LocalDateTime.now());
                 webhookInboxRepository.save(webhook);
@@ -165,7 +166,7 @@ public class WebhookProcessor {
                 case "invoice.updated":
                 case "invoice_payment.paid":
                     // These events are part of the flow but we rely on other events for processing
-                    logger.debug("Received event {}, no action required", eventType);
+                    log.debug("Received event {}, no action required", eventType);
                     break;
             }
 
@@ -173,10 +174,10 @@ public class WebhookProcessor {
             webhook.setProcessedAt(LocalDateTime.now());
             webhookInboxRepository.save(webhook);
 
-            logger.info("Successfully processed webhook: {}", webhook.getEventId());
+            log.info("Successfully processed webhook: {}", webhook.getEventId());
 
         } catch (RetryableWebhookException e) {
-            logger.info("Webhook {} requires retry: {}", webhook.getEventId(), e.getMessage());
+            log.info("Webhook {} requires retry: {}", webhook.getEventId(), e.getMessage());
             webhook.setRetryCount(webhook.getRetryCount() + 1);
 
             // Allow up to 12 retries (approx 1 minute with 5s delay)
@@ -186,12 +187,12 @@ public class WebhookProcessor {
             } else {
                  // Remain PENDING for next run
                  webhook.setStatus(WebhookInbox.WebhookStatus.PENDING);
-                 logger.info("Setting status back to PENDING for webhook {} (attempt {})", webhook.getEventId(), webhook.getRetryCount());
+                 log.info("Setting status back to PENDING for webhook {} (attempt {})", webhook.getEventId(), webhook.getRetryCount());
             }
             webhookInboxRepository.save(webhook);
 
         } catch (Exception e) {
-            logger.error("Error processing webhook: {}", webhook.getEventId(), e);
+            log.error("Error processing webhook: {}", webhook.getEventId(), e);
             webhook.setStatus(WebhookInbox.WebhookStatus.FAILED);
             webhook.setErrorMessage(e.getMessage());
             webhook.setRetryCount(webhook.getRetryCount() + 1);
@@ -228,7 +229,7 @@ public class WebhookProcessor {
             Subscription existing = byStripeId.get();
             // Compare timestamps: if stored event time is newer than this event, we skip properly
             if (existing.getLastStripeEventAt() != null && existing.getLastStripeEventAt().isAfter(eventTime)) {
-                logger.info("Skipping outdated event for subscription {}. Event time: {}, Last processed: {}",
+                log.info("Skipping outdated event for subscription {}. Event time: {}, Last processed: {}",
                         stripeSubscriptionId, eventTime, existing.getLastStripeEventAt());
                 return;
             }
@@ -241,7 +242,7 @@ public class WebhookProcessor {
         String tenantIdStr = metadata != null ? (String) metadata.get("tenant_id") : null;
 
         if (tenantIdStr == null) {
-            logger.warn("No tenant_id in subscription metadata, skipping");
+            log.warn("No tenant_id in subscription metadata, skipping");
             return;
         }
 
@@ -276,7 +277,7 @@ public class WebhookProcessor {
             });
 
             if (subscription.getStripeSubscriptionId() != null && !subscription.getStripeSubscriptionId().equals(stripeSubscriptionId)) {
-                logger.info("Replacing previous subscription ID {} with new ID {} for tenant {}",
+                log.info("Replacing previous subscription ID {} with new ID {} for tenant {}",
                         subscription.getStripeSubscriptionId(), stripeSubscriptionId, tenantId);
             }
         }
@@ -286,7 +287,7 @@ public class WebhookProcessor {
         subscription.setStatus(mapStripeStatus(status));
         subscription.setLastStripeEventAt(eventTime);
 
-        logger.info("Persisting subscription update for Tenant {}: StripeID={}, Status={}, EventTime={}",
+        log.info("Persisting subscription update for Tenant {}: StripeID={}, Status={}, EventTime={}",
                 tenantId, stripeSubscriptionId, status, eventTime);
 
         // Extract plan details from metadata or items
@@ -322,12 +323,12 @@ public class WebhookProcessor {
                         try {
                             PlanEntity plan = planService.getPlan(planCode);
                             subscription.setPlan(plan);
-                            logger.info("Set plan {} for subscription", planCode);
+                            log.info("Set plan {} for subscription", planCode);
                         } catch (Exception e) {
-                            logger.warn("Could not find plan with code: {}", planCode, e);
+                            log.warn("Could not find plan with code: {}", planCode, e);
                         }
                     } else {
-                        logger.warn("No plan code found in price metadata or subscription metadata");
+                        log.warn("No plan code found in price metadata or subscription metadata");
                     }
                 }
             }
@@ -337,7 +338,7 @@ public class WebhookProcessor {
             subscriptionRepository.save(subscription);
         } catch (DataIntegrityViolationException e) {
             // Check if it's a constraint violation on stripe_subscription_id
-            logger.warn("Data integrity violation saving subscription (likely duplicate). Retrying fetch. Error: {}", e.getMessage());
+            log.warn("Data integrity violation saving subscription (likely duplicate). Retrying fetch. Error: {}", e.getMessage());
 
             // Try to find the existing one that caused the conflict
             Optional<Subscription> duplicate = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
@@ -349,7 +350,7 @@ public class WebhookProcessor {
                 // Plan update logic would need to run again or we trust the previous logic was same.
                 // Simpler to just re-save this one.
                 subscriptionRepository.save(subscription);
-                logger.info("Recovered from duplicate subscription creation. Updated existing ID: {}", subscription.getId());
+                log.info("Recovered from duplicate subscription creation. Updated existing ID: {}", subscription.getId());
             } else {
                 // If we still can't find it, rethrow
                 throw e;
@@ -362,10 +363,10 @@ public class WebhookProcessor {
             try {
                 entitlementService.syncEntitlements(tenantId);
             } catch (Exception e) {
-                logger.error("Failed to sync entitlements for tenant {}", tenantId, e);
+                log.error("Failed to sync entitlements for tenant {}", tenantId, e);
             }
         } else {
-            logger.info("Skipping entitlement sync for tenant {} because subscription status is {}", tenantId, subscription.getStatus());
+            log.info("Skipping entitlement sync for tenant {} because subscription status is {}", tenantId, subscription.getStatus());
         }
 
         // Publish outbox event
@@ -377,7 +378,7 @@ public class WebhookProcessor {
 
         outboxService.publish("EntitlementsChanged", "Tenant", tenantId, eventPayload);
 
-        logger.info("Updated subscription for tenant: {}", tenantId);
+        log.info("Updated subscription for tenant: {}", tenantId);
     }
 
     private void handleSubscriptionDeleted(WebhookInbox webhook) {
@@ -400,16 +401,16 @@ public class WebhookProcessor {
         // The subscription ID is available in the session object
         String subscriptionId = (String) sessionData.get("subscription");
         if (subscriptionId != null) {
-            logger.info("Checkout session completed for subscription: {}", subscriptionId);
+            log.info("Checkout session completed for subscription: {}", subscriptionId);
 
             // Sende Onboarding-E-Mail nach erfolgreichem Checkout
             Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(subscriptionId);
             if (subscriptionOpt.isPresent()) {
                 Subscription subscription = subscriptionOpt.get();
-                logger.info("Sending onboarding email for subscription: {}", subscriptionId);
+                log.info("Sending onboarding email for subscription: {}", subscriptionId);
                 sendOnboardingEmail(subscription);
             } else {
-                logger.warn("Subscription not found for checkout session: {}", subscriptionId);
+                log.warn("Subscription not found for checkout session: {}", subscriptionId);
                 throw new RetryableWebhookException("Subscription not found for checkout session: " + subscriptionId);
             }
         }
@@ -438,13 +439,13 @@ public class WebhookProcessor {
         } else {
             String stripeSubscriptionId = (String) invoiceData.get("subscription");
             if (stripeSubscriptionId == null) {
-                logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
+                log.warn("Invoice {} has no subscription ID", stripeInvoiceId);
                 return;
             }
 
             Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
             if (subscriptionOpt.isEmpty()) {
-                logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
+                log.warn("Subscription not found for invoice: {}", stripeInvoiceId);
                 throw new RetryableWebhookException("Subscription not found for invoice: " + stripeInvoiceId);
             }
 
@@ -472,11 +473,11 @@ public class WebhookProcessor {
              // Maybe email was sent as "Open" already?
              // We could send a "Receipt" email here if we wanted to distinguish between Invoice and Receipt.
              // For now, let's assume one email per invoice is enough, or we can improve later.
-             logger.info("Email for invoice {} already sent.", stripeInvoiceId);
+             log.info("Email for invoice {} already sent.", stripeInvoiceId);
         }
 
         invoiceRepository.save(invoice);
-        logger.info("Saved invoice {} (PAID) for tenant {}", stripeInvoiceId, invoice.getTenantId());
+        log.info("Saved invoice {} (PAID) for tenant {}", stripeInvoiceId, invoice.getTenantId());
     }
 
     @SuppressWarnings("unchecked")
@@ -494,7 +495,7 @@ public class WebhookProcessor {
         // Extract subscription ID from invoice
         String subscriptionId = (String) invoiceData.get("subscription");
         if (subscriptionId != null) {
-            logger.warn("Payment failed for subscription: {}", subscriptionId);
+            log.warn("Payment failed for subscription: {}", subscriptionId);
             // In a real system, you'd update the subscription status to PAST_DUE
         }
     }
@@ -515,21 +516,21 @@ public class WebhookProcessor {
         // Check if invoice already handled (e.g. by payment succeeded coming first)
          Optional<Invoice> existingInvoice = invoiceRepository.findFirstByStripeInvoiceId(stripeInvoiceId);
          if (existingInvoice.isPresent() && existingInvoice.get().isEmailSent()) {
-             logger.info("Invoice {} already processed and email sent.", stripeInvoiceId);
+             log.info("Invoice {} already processed and email sent.", stripeInvoiceId);
              return;
          }
 
         // Find Subscription to get Tenant
         String stripeSubscriptionId = (String) invoiceData.get("subscription");
         if (stripeSubscriptionId == null) {
-            logger.warn("Invoice {} has no subscription ID", stripeInvoiceId);
+            log.warn("Invoice {} has no subscription ID", stripeInvoiceId);
             return; // Cannot retry without ID
         }
 
         Optional<Subscription> subscriptionOpt = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId);
         if (subscriptionOpt.isEmpty()) {
             // It might be a one-off invoice or usage, but if no sub found we can't link to tenant easily yet.
-             logger.warn("Subscription not found for invoice: {}", stripeInvoiceId);
+             log.warn("Subscription not found for invoice: {}", stripeInvoiceId);
              throw new RetryableWebhookException("Subscription not found for invoice: " + stripeInvoiceId);
         }
 
@@ -554,7 +555,7 @@ public class WebhookProcessor {
         // Schedule email
         if (!invoice.isEmailSent()) {
             invoice.setEmailScheduledAt(LocalDateTime.now().plusMinutes(5));
-            logger.info("Scheduled email for invoice {} at {}", stripeInvoiceId, invoice.getEmailScheduledAt());
+            log.info("Scheduled email for invoice {} at {}", stripeInvoiceId, invoice.getEmailScheduledAt());
         }
 
         invoiceRepository.save(invoice);
@@ -587,14 +588,16 @@ public class WebhookProcessor {
                     currency != null ? currency.toUpperCase() : "USD",
                     formattedDate
                 );
-                logger.info("Sent invoice {} to {}", invoiceNumber, customerEmail);
+                log.info("Sent invoice {} to {}", invoiceNumber, customerEmail);
             } else {
                  // Try to find via subscription/tenant (re-fetch to be safe or use invoice.getTenantId)
                  // We have tenantId in invoice
                  Optional<Tenant> tenantOpt = tenantRepository.findById(invoice.getTenantId());
                  if (tenantOpt.isPresent() && tenantOpt.get().getOwner() != null) {
                       String ownerEmail = tenantOpt.get().getOwner().getEmail();
-                      String ownerName = tenantOpt.get().getOwner().getUsername();
+                      String ownerName = tenantOpt.get().getOwner().getFirstName() != null ?
+                              tenantOpt.get().getOwner().getFirstName() :
+                              tenantOpt.get().getOwner().getUsername();
 
                       emailService.sendInvoiceEmail(
                             ownerEmail,
@@ -605,13 +608,13 @@ public class WebhookProcessor {
                             currency != null ? currency.toUpperCase() : "USD",
                             formattedDate
                         );
-                        logger.info("Sent invoice {} to owner {}", invoiceNumber, ownerEmail);
+                        log.info("Sent invoice {} to owner {}", invoiceNumber, ownerEmail);
                   } else {
-                      logger.warn("Could not determine recipient for invoice {}", invoiceNumber);
+                      log.warn("Could not determine recipient for invoice {}", invoiceNumber);
                   }
             }
         } catch (Exception e) {
-            logger.error("Failed to send invoice email for invoice {}", invoiceNumber, e);
+            log.error("Failed to send invoice email for invoice {}", invoiceNumber, e);
             // We can't do much here inside a transaction except log it.
             // In a better system we would have an EmailJob queue.
             // Here, if it fails, emailSent remains false (because we only set it to true after this returns successfully in caller method if we move logic there, OR we suppress exception here).
@@ -640,7 +643,7 @@ public class WebhookProcessor {
         try {
             Tenant tenant = subscription.getTenant();
             if (tenant.getOwner() == null) {
-                logger.warn("Tenant {} has no owner, cannot send onboarding email", tenant.getId());
+                log.warn("Tenant {} has no owner, cannot send onboarding email", tenant.getId());
                 return;
             }
 
@@ -651,9 +654,9 @@ public class WebhookProcessor {
             String ownerName = tenant.getOwner().getFirstName() != null ? tenant.getOwner().getFirstName() : ownerUsername;
 
             emailService.sendOnboardingEmail(ownerEmail, ownerName, ownerUsername, planName);
-            logger.info("Onboarding email sent to {} for tenant {}", ownerEmail, tenant.getId());
+            log.info("Onboarding email sent to {} for tenant {}", ownerEmail, tenant.getId());
         } catch (Exception e) {
-            logger.error("Failed to send onboarding email for tenant {}", subscription.getTenant().getId(), e);
+            log.error("Failed to send onboarding email for tenant {}", subscription.getTenant().getId(), e);
             // Wir werfen keine Exception, um die Webhook-Verarbeitung nicht zu unterbrechen
         }
     }

@@ -134,7 +134,7 @@ public class EmailService {
 
             String template = templateService.loadInvoiceTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
-                    "username", toName != null ? toName : toEmail,
+                    "firstName", toName != null ? toName : toEmail,
                     "invoiceNumber", invoiceNumber,
                     "amount", amount,
                     "currency", currency,
