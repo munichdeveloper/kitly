@@ -52,7 +52,7 @@ public class EmailService {
 
             String template = templateService.loadVerificationTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
-                    "username", username,
+                    "firstName", toName,
                     "verificationUrl", verificationUrl
             ));
 
@@ -65,15 +65,15 @@ public class EmailService {
         }
     }
 
-    public void sendPasswordResetEmail(String toEmail, String token, String username) {
-        sendPasswordResetEmail(toEmail, token, username, defaultLocale, defaultBranding);
+    public void sendPasswordResetEmail(String toEmail, String token, String name) {
+        sendPasswordResetEmail(toEmail, token, name, defaultLocale, defaultBranding);
     }
 
     public void sendPasswordResetEmail(String toEmail, String token, String username, String locale) {
         sendPasswordResetEmail(toEmail, token, username, locale, defaultBranding);
     }
 
-    public void sendPasswordResetEmail(String toEmail, String token, String username, String locale, String branding) {
+    public void sendPasswordResetEmail(String toEmail, String token, String name, String locale, String branding) {
         try {
             String subject = "Passwort zurücksetzen";
 
@@ -82,7 +82,7 @@ public class EmailService {
 
             String template = templateService.loadPasswordResetTemplate(locale, branding);
             String htmlContent = templateService.replacePlaceholders(template, Map.of(
-                    "username", username,
+                    "firstName", name,
                     "resetUrl", resetUrl
             ));
 

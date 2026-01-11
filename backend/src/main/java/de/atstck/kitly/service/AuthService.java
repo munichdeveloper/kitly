@@ -281,7 +281,7 @@ public class AuthService {
         passwordResetTokenRepository.save(resetToken);
 
         // E-Mail senden
-        emailService.sendPasswordResetEmail(user.getEmail(), token, user.getUsername());
+        emailService.sendPasswordResetEmail(user.getEmail(), token, user.getFirstName() != null ? user.getFirstName() : user.getUsername());
     }
 
     @Transactional

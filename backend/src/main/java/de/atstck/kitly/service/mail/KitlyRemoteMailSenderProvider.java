@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
@@ -52,8 +53,8 @@ public class KitlyRemoteMailSenderProvider implements MailSenderProvider {
         request.setToName(toName);
         request.setSubject(subject);
         request.setHtmlContent(htmlContent);
-        // Simple HTML to Text conversion
-        request.setTextContent(htmlContent.replaceAll("<[^>]*>", ""));
+        // Convert HTML to plain text for email preview/text version
+        request.setTextContent(convertHtmlToText(htmlContent));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -77,8 +78,25 @@ public class KitlyRemoteMailSenderProvider implements MailSenderProvider {
 
     @Override
     public void sendHtmlMailWithAttachment(String to, String toName, String subject, String htmlContent, String attachmentName, byte[] attachmentData, String mimeType) {
-        log.warn("Attachments are not yet supported for KITLY_MAIL provider. Sending email without attachment to {}", to);
+        log.warn("Attachments are not yet supported for KITLY_MAIL provider. Sending email without attachment to {}", to); // TODO
         sendHtmlMail(to, toName, subject, htmlContent);
+    }
+
+    /**
+     * Converts HTML content to plain text for email preview and text-only clients.
+     * Properly handles HTML entities, whitespace normalization, and line breaks.
+     *
+     * @param html the HTML content to convert
+     * @return clean plain text version
+     */
+    private String convertHtmlToText(String html) {
+        if (html == null || html.isBlank()) {
+            return "";
+        }
+        // Use Jsoup to parse HTML and extract text
+        // This properly handles HTML entities (&nbsp;, &quot;, etc.)
+        // and preserves meaningful whitespace
+        return Jsoup.parse(html).text();
     }
 
     @Data
