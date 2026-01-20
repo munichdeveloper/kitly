@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans", "/api/webhooks/**", "/api/billing/webhooks/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans", "/api/webhooks/**", "/api/billing/webhooks/**", "/api/newsletter/subscribe").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
