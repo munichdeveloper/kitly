@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controla - Newsletter-Anmeldung bestätigen</title>
+    <style>
+        {{BASE_TEMPLATE}}
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">Controla</div>
+        <div class="subtitle">Newsletter-Bestätigung</div>
+    </div>
+
+    <div class="content">
+        <h2 class="greeting">Hallo {{firstName}},</h2>
+
+        <p class="text">
+            Vielen Dank für dein Interesse an unserem Newsletter!
+        </p>
+
+        <p class="text">
+            Du hast dich für den Kanal <strong>{{channel}}</strong> angemeldet.
+            Um deine Anmeldung abzuschließen und unsere Updates zu erhalten,
+            bestätige bitte deine E-Mail-Adresse.
+        </p>
+
+        <div class="button-container">
+            <a href="{{confirmationUrl}}" class="button">Newsletter-Anmeldung bestätigen</a>
+        </div>
+
+        <div class="link-box">
+            <div class="link-label">Oder kopiere diesen Link in deinen Browser:</div>
+            <div class="link-url">{{confirmationUrl}}</div>
+        </div>
+
+        <div class="notice">
+            <p class="notice-text">
+                <span class="notice-highlight">Hinweis:</span> Durch die Bestätigung stimmst du dem Erhalt von Newsletter-E-Mails zu diesem Kanal zu.
+            </p>
+        </div>
+
+        <p class="text">
+            Falls du dich nicht für unseren Newsletter angemeldet hast, kannst du diese E-Mail einfach ignorieren.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2026 Controla. Alle Rechte vorbehalten.</p>
+    </div>
+</div>
+</body>
+</html>

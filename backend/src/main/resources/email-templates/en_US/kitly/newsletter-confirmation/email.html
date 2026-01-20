@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitly - Confirm Newsletter Subscription</title>
+    <style>
+        {{BASE_TEMPLATE}}
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">Kitly</div>
+        <div class="subtitle">Newsletter Confirmation</div>
+    </div>
+
+    <div class="content">
+        <h1>Confirm Newsletter Subscription</h1>
+
+        <p class="greeting">Hello {{firstName}},</p>
+
+        <p>Thank you for your interest in our newsletter!</p>
+
+        <p>You have subscribed to the channel <strong>{{channel}}</strong>.
+           To complete your registration and receive our updates,
+           please confirm your email address.</p>
+
+        <div class="button-container">
+            <a href="{{confirmationUrl}}" class="button">Confirm Newsletter Subscription</a>
+        </div>
+
+        <div class="link-box">
+            <div class="link-label">Or copy this link to your browser:</div>
+            <div class="link-url">{{confirmationUrl}}</div>
+        </div>
+
+        <div class="notice">
+            <p class="notice-text">
+                <span class="notice-highlight">Note:</span> By confirming, you agree to receive newsletter emails for this channel.
+            </p>
+        </div>
+
+        <p>If you did not subscribe to our newsletter, you can simply ignore this email.</p>
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2026 Kitly. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

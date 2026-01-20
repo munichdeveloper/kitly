@@ -154,4 +154,34 @@ public class EmailService {
             throw new RuntimeException("Failed to send invoice email", e);
         }
     }
+
+    public void sendNewsletterConfirmation(String toEmail, String toName, String channel, String confirmationToken) {
+        sendNewsletterConfirmation(toEmail, toName, channel, confirmationToken, defaultLocale, defaultBranding);
+    }
+
+    public void sendNewsletterConfirmation(String toEmail, String toName, String channel, String confirmationToken, String locale) {
+        sendNewsletterConfirmation(toEmail, toName, channel, confirmationToken, locale, defaultBranding);
+    }
+
+    public void sendNewsletterConfirmation(String toEmail, String toName, String channel, String confirmationToken, String locale, String branding) {
+        try {
+            String subject = "Bestätige deine Newsletter-Anmeldung";
+
+            String confirmationUrl = frontendUrl + "/newsletter/confirm?token=" + confirmationToken;
+
+            String template = templateService.loadNewsletterConfirmationTemplate(locale, branding);
+            String htmlContent = templateService.replacePlaceholders(template, Map.of(
+                    "firstName", toName != null ? toName : toEmail,
+                    "channel", channel,
+                    "confirmationUrl", confirmationUrl
+            ));
+
+            mailSenderProvider.sendHtmlMail(toEmail, toName, subject, htmlContent);
+            log.info("Newsletter confirmation email sent to: {} (locale: {}, branding: {}, channel: {})", toEmail, locale, branding, channel);
+
+        } catch (Exception e) {
+            log.error("Failed to send newsletter confirmation email to: {}", toEmail, e);
+            throw new RuntimeException("Failed to send newsletter confirmation email", e);
+        }
+    }
 }

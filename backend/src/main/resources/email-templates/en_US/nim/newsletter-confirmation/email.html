@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controla - Confirm Newsletter Subscription</title>
+    <style>
+        {{BASE_TEMPLATE}}
+    </style>
+</head>
+<body>
+<div class="email-container">
+    <div class="header">
+        <div class="logo">Controla</div>
+        <div class="subtitle">Newsletter Confirmation</div>
+    </div>
+
+    <div class="content">
+        <h2 class="greeting">Hi {{firstName}},</h2>
+
+        <p class="text">
+            Thank you for your interest in our newsletter!
+        </p>
+
+        <div class="button-container">
+            <a href="{{confirmationUrl}}" class="button">Confirm Newsletter Subscription</a>
+        </div>
+
+        <div class="link-box">
+            <div class="link-label">Or copy this link to your browser:</div>
+            <div class="link-url">{{confirmationUrl}}</div>
+        </div>
+
+        <div class="notice">
+            <p class="notice-text">
+                <span class="notice-highlight">Note:</span> By confirming, you agree to receive newsletter emails from Controla.
+            </p>
+        </div>
+
+        <p class="text">
+            If you did not subscribe to our newsletter, you can simply ignore this email.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p class="footer-text">&copy; 2026 Controla. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
