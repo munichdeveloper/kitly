@@ -2,19 +2,28 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitly - Willkommen!</title>
     <style>
         {{BASE_TEMPLATE}}
     </style>
 </head>
 <body>
-<div class="container">
+<div class="email-container">
     <div class="header">
-        <h1>🎉 Willkommen bei Kitly!</h1>
+        <div class="logo">Kitly</div>
+        <div class="subtitle">Willkommen</div>
     </div>
+
     <div class="content">
-        <div class="success-icon">✓</div>
-        <h2>Hallo {{firstName}},</h2>
+        <div class="success-icon">
+            <div class="success-icon-circle">✓</div>
+        </div>
+
+        <h1>🎉 Willkommen bei Kitly!</h1>
+
+        <p class="greeting">Hallo {{firstName}},</p>
+
         <p>herzlichen Glückwunsch! Deine Zahlung war erfolgreich und dein Konto ist jetzt aktiv.</p>
 
         <div class="info-box">
@@ -22,22 +31,23 @@
             <strong>Status:</strong> Aktiv
         </div>
 
-        <h3>Nächste Schritte:</h3>
+        <h2>Nächste Schritte:</h2>
         <p>Wir freuen uns, dich an Bord zu haben! Hier sind einige Ressourcen, die dir den Einstieg erleichtern:</p>
 
-        <center>
+        <div class="button-container">
             <a href="{{appUrl}}" class="button">Zur App</a>
             <a href="{{docsUrl}}" class="button-secondary">Dokumentation</a>
-        </center>
+        </div>
 
-        <h3>Hilfe benötigt?</h3>
+        <h2>Hilfe benötigt?</h2>
         <p>Unsere Dokumentation enthält ausführliche Anleitungen, API-Referenzen und Best Practices. Falls du weitere Unterstützung benötigst, zögere nicht, uns zu kontaktieren.</p>
 
         <p>Viel Erfolg mit Kitly!</p>
-        <p>Dein Kitly-Team</p>
+        <p><strong>Dein Kitly-Team</strong></p>
     </div>
+
     <div class="footer">
-        <p>&copy; 2025 Kitly. Alle Rechte vorbehalten.</p>
+        <p class="footer-text">&copy; 2026 Kitly. Alle Rechte vorbehalten.</p>
     </div>
 </div>
 </body>

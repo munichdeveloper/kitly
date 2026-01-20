@@ -2,19 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Kitly - Welcome!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controla - Welcome!</title>
     <style>
         {{BASE_TEMPLATE}}
     </style>
 </head>
 <body>
-<div class="container">
+<div class="email-container">
     <div class="header">
-        <h1>🎉 Welcome to Kitly!</h1>
+        <div class="logo">Controla</div>
+        <div class="subtitle">Welcome</div>
     </div>
+
     <div class="content">
-        <div class="success-icon">✓</div>
-        <h2>Hello {{firstName}},</h2>
+        <div class="success-icon">
+            <div class="success-icon-circle">✓</div>
+        </div>
+
+        <h1>Welcome to Controla!</h1>
+
+        <p class="greeting">Hello {{firstName}},</p>
+
         <p>congratulations! Your payment was successful and your account is now active.</p>
 
         <div class="info-box">
@@ -22,22 +31,23 @@
             <strong>Status:</strong> Active
         </div>
 
-        <h3>Next Steps:</h3>
+        <h2>Next Steps:</h2>
         <p>We're excited to have you on board! Here are some resources to help you get started:</p>
 
-        <center>
+        <div class="button-container">
             <a href="{{appUrl}}" class="button">Go to App</a>
             <a href="{{docsUrl}}" class="button-secondary">Documentation</a>
-        </center>
+        </div>
 
-        <h3>Need Help?</h3>
+        <h2>Need Help?</h2>
         <p>Our documentation contains detailed guides, API references, and best practices. If you need further assistance, don't hesitate to contact us.</p>
 
-        <p>Good luck with Kitly!</p>
-        <p>Your Kitly Team</p>
+        <p>Good luck with Controla!</p>
+        <p><strong>Your Controla Team</strong></p>
     </div>
+
     <div class="footer">
-        <p>&copy; 2025 Kitly. All rights reserved.</p>
+        <p class="footer-text">&copy; 2026 Controla. All rights reserved.</p>
     </div>
 </div>
 </body>
