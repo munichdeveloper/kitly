@@ -21,18 +21,21 @@ public class EntitlementService {
     private final EntitlementVersionRepository entitlementVersionRepository;
     private final MembershipRepository membershipRepository;
     private final TenantRepository tenantRepository;
-    
+    private final PlanService planService;
+
     public EntitlementService(
             SubscriptionRepository subscriptionRepository,
             EntitlementRepository entitlementRepository,
             EntitlementVersionRepository entitlementVersionRepository,
             MembershipRepository membershipRepository,
-            TenantRepository tenantRepository) {
+            TenantRepository tenantRepository,
+            PlanService planService) {
         this.subscriptionRepository = subscriptionRepository;
         this.entitlementRepository = entitlementRepository;
         this.entitlementVersionRepository = entitlementVersionRepository;
         this.membershipRepository = membershipRepository;
         this.tenantRepository = tenantRepository;
+        this.planService = planService;
     }
     
     /**
@@ -54,15 +57,12 @@ public class EntitlementService {
             throw new IllegalStateException("Subscription has no plan assigned");
         }
 
-        // Get plan entitlements from catalog
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode.toLowerCase());
-        if (plan == null) {
-            throw new IllegalStateException("Invalid plan code: " + planCode);
-        }
-        
+        // Get plan entitlements from PlanService (database)
+        Map<String, String> planEntitlements = planService.getPlanEntitlements(planCode);
+
         // Start with plan entitlements
         Map<String, EntitlementResponse.EntitlementItem> mergedEntitlements = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : plan.getEntitlements().entrySet()) {
+        for (Map.Entry<String, String> entry : planEntitlements.entrySet()) {
             mergedEntitlements.put(entry.getKey(), EntitlementResponse.EntitlementItem.builder()
                     .key(entry.getKey())
                     .value(entry.getValue())
@@ -130,8 +130,12 @@ public class EntitlementService {
             return; // No plan assigned
         }
 
-        PlanCatalog.PlanDefinition plan = PlanCatalog.getPlan(planCode.toLowerCase());
-        if (plan == null) {
+        // Get plan entitlements from PlanService (database)
+        Map<String, String> planEntitlements;
+        try {
+            planEntitlements = planService.getPlanEntitlements(planCode);
+        } catch (ResourceNotFoundException e) {
+            // Plan not found, nothing to sync
             return;
         }
 
@@ -141,7 +145,7 @@ public class EntitlementService {
                 .collect(Collectors.toMap(Entitlement::getFeatureKey, e -> e));
 
         // Sync plan entitlements
-        for (Map.Entry<String, String> entry : plan.getEntitlements().entrySet()) {
+        for (Map.Entry<String, String> entry : planEntitlements.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue();
 

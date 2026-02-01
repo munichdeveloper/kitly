@@ -10,10 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +33,9 @@ class EntitlementServiceTest {
     
     @Mock
     private TenantRepository tenantRepository;
+
+    @Mock
+    private PlanService planService;
     
     @InjectMocks
     private EntitlementService entitlementService;
@@ -77,6 +77,15 @@ class EntitlementServiceTest {
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
         when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(testSubscription));
+
+        // Mock PlanService to return business plan entitlements
+        Map<String, String> businessEntitlements = new LinkedHashMap<>();
+        businessEntitlements.put("features.ai_assistant", "true");
+        businessEntitlements.put("app_access.nim", "true");
+        businessEntitlements.put("limits.projects", "100");
+        businessEntitlements.put("limits.api_calls_per_month", "10000");
+        when(planService.getPlanEntitlements("business")).thenReturn(businessEntitlements);
+
         when(entitlementRepository.findByTenantAndEnabled(testTenant, true))
                 .thenReturn(Collections.emptyList());
         when(membershipRepository.countByTenantIdAndStatus(testTenantId, Membership.MembershipStatus.ACTIVE))
@@ -125,6 +134,14 @@ class EntitlementServiceTest {
         when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(testSubscription));
         
+        // Mock PlanService to return business plan entitlements
+        Map<String, String> businessEntitlements = new LinkedHashMap<>();
+        businessEntitlements.put("features.ai_assistant", "true");
+        businessEntitlements.put("app_access.nim", "true");
+        businessEntitlements.put("limits.projects", "100");
+        businessEntitlements.put("limits.api_calls_per_month", "10000");
+        when(planService.getPlanEntitlements("business")).thenReturn(businessEntitlements);
+
         // Add an override for ai_assistant
         Entitlement override = Entitlement.builder()
                 .id(UUID.randomUUID())
@@ -176,6 +193,14 @@ class EntitlementServiceTest {
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
         when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(testSubscription));
+
+        // Mock PlanService to return starter plan entitlements
+        Map<String, String> starterEntitlements = new LinkedHashMap<>();
+        starterEntitlements.put("features.ai_assistant", "false");
+        starterEntitlements.put("limits.projects", "10");
+        starterEntitlements.put("limits.api_calls_per_month", "1000");
+        when(planService.getPlanEntitlements("starter")).thenReturn(starterEntitlements);
+
         when(entitlementRepository.findByTenantAndEnabled(testTenant, true))
                 .thenReturn(Collections.emptyList());
         when(membershipRepository.countByTenantIdAndStatus(testTenantId, Membership.MembershipStatus.ACTIVE))
@@ -225,6 +250,15 @@ class EntitlementServiceTest {
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
         when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
                 .thenReturn(Optional.of(testSubscription));
+
+        // Mock PlanService to return business plan entitlements
+        Map<String, String> businessEntitlements = new LinkedHashMap<>();
+        businessEntitlements.put("features.ai_assistant", "true");
+        businessEntitlements.put("app_access.nim", "true");
+        businessEntitlements.put("limits.projects", "100");
+        businessEntitlements.put("limits.api_calls_per_month", "10000");
+        when(planService.getPlanEntitlements("business")).thenReturn(businessEntitlements);
+
         when(entitlementRepository.findByTenantAndEnabled(testTenant, true))
                 .thenReturn(Collections.emptyList());
         when(membershipRepository.countByTenantIdAndStatus(testTenantId, Membership.MembershipStatus.ACTIVE))

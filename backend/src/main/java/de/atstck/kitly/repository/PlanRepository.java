@@ -38,9 +38,9 @@ public interface PlanRepository extends JpaRepository<PlanEntity, UUID> {
     List<PlanEntity> findAllByOrderByDisplayOrderAsc();
 
     /**
-     * Find all plans with their entitlements eagerly loaded
+     * Find all plans with their entitlements eagerly loaded (case-insensitive)
      */
-    @Query("SELECT DISTINCT p FROM PlanEntity p LEFT JOIN FETCH p.entitlements WHERE p.code = :code")
+    @Query("SELECT DISTINCT p FROM PlanEntity p LEFT JOIN FETCH p.entitlements WHERE LOWER(p.code) = LOWER(:code)")
     Optional<PlanEntity> findByCodeWithEntitlements(String code);
 }
 
