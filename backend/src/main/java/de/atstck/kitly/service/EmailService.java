@@ -86,7 +86,7 @@ public class EmailService {
                     "resetUrl", resetUrl
             ));
 
-            mailSenderProvider.sendHtmlMail(toEmail, subject, htmlContent, htmlContent);
+            mailSenderProvider.sendHtmlMail(toEmail, name, subject, htmlContent);
             log.info("Password reset email sent to: {} (locale: {}, branding: {})", toEmail, locale, branding);
 
         } catch (Exception e) {
