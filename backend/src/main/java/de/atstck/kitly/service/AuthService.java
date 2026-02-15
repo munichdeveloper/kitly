@@ -13,10 +13,13 @@ import de.atstck.kitly.repository.PasswordResetTokenRepository;
 import de.atstck.kitly.repository.RoleRepository;
 import de.atstck.kitly.repository.UserRepository;
 import de.atstck.kitly.security.JwtUtil;
+import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -136,7 +140,13 @@ public class AuthService {
         userRepository.save(user);
 
         // Create default tenant
-        createDefaultTenant(request, user);
+        // TenantService will automatically link the user to the created tenant
+        try {
+            createDefaultTenant(request, user.getUsername());
+        } catch (Exception e) {
+            log.warn("Failed to create default tenant for user: {}, but user account was created. Error: {}",
+                     user.getUsername(), e.getMessage());
+        }
 
         // Generate token for the new user
         UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
@@ -150,73 +160,97 @@ public class AuthService {
         return new AuthResponse(token, user.getUsername(), user.getEmail());
     }
 
-    @Transactional
+    /**
+     * Verify email and create user account with default tenant.
+     * If tenant creation fails, user is still created but without a default tenant.
+     * No @Transactional to avoid transaction management issues with nested transactions.
+     */
     public AuthResponse verifyEmail(String token) {
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+        try {
+            EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
+                    .orElseThrow(() -> new RuntimeException("Invalid verification token"));
 
-        if (verificationToken.isExpired()) {
-            throw new RuntimeException("Verification token has expired");
+            if (verificationToken.isExpired()) {
+                throw new RuntimeException("Verification token has expired");
+            }
+
+            if (verificationToken.getVerified()) {
+                throw new RuntimeException("Email already verified");
+            }
+
+            if (userRepository.existsByUsername(verificationToken.getUsername())) {
+                throw new RuntimeException("Username is already taken");
+            }
+
+            if (userRepository.existsByEmail(verificationToken.getEmail())) {
+                throw new RuntimeException("Email is already in use");
+            }
+
+            // STEP 1: Create user FIRST (in this transaction, so it's persisted before tenant creation)
+            User user = User.builder()
+                    .username(verificationToken.getUsername())
+                    .email(verificationToken.getEmail())
+                    .password(verificationToken.getEncodedPassword())
+                    .firstName(verificationToken.getFirstName())
+                    .lastName(verificationToken.getLastName())
+                    .isActive(true)
+                    .emailVerified(true)
+                    .build();
+
+            Set<Role> roles = new HashSet<>();
+            Role userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
+                    .orElseThrow(() -> new RuntimeException("Role not found"));
+            roles.add(userRole);
+            user.setRoles(roles);
+
+            userRepository.save(user);
+            log.info("User created successfully: {}", verificationToken.getUsername());
+
+            // STEP 2: Try to create tenant AFTER user is created
+            // If this fails, the user is already created and will be committed
+            SignupRequest tenantRequest = new SignupRequest();
+            tenantRequest.setUsername(verificationToken.getUsername());
+            tenantRequest.setEmail(verificationToken.getEmail());
+            tenantRequest.setFirstName(verificationToken.getFirstName());
+            tenantRequest.setLastName(verificationToken.getLastName());
+            tenantRequest.setCompanyName(verificationToken.getCompanyName());
+
+            try {
+                createDefaultTenant(tenantRequest, verificationToken.getUsername());
+                log.info("Tenant creation successful for user: {}", verificationToken.getUsername());
+            } catch (Exception e) {
+                // Log the error but continue - user was successfully created
+                // The user can create a tenant manually later
+                log.warn("Failed to create default tenant for user: {}, but user account was created. Error: {}",
+                         verificationToken.getUsername(), e.getMessage());
+            }
+
+            // STEP 3: Mark token as verified
+            verificationToken.setVerified(true);
+            emailVerificationTokenRepository.save(verificationToken);
+
+            // STEP 4: Generate JWT token for the new user
+            UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
+                    .username(user.getUsername())
+                    .password(user.getPassword())
+                    .authorities("ROLE_USER")
+                    .build();
+
+            String jwtToken = jwtUtil.generateToken(userDetails);
+
+            log.info("Email verification completed successfully for user: {}", user.getUsername());
+
+            return new AuthResponse(jwtToken, user.getUsername(), user.getEmail());
+        } catch (RuntimeException e) {
+            log.error("Error during email verification: {}", e.getMessage(), e);
+
+
+            throw e;
         }
-
-        if (verificationToken.getVerified()) {
-            throw new RuntimeException("Email already verified");
-        }
-
-        if (userRepository.existsByUsername(verificationToken.getUsername())) {
-            throw new RuntimeException("Username is already taken");
-        }
-
-        if (userRepository.existsByEmail(verificationToken.getEmail())) {
-            throw new RuntimeException("Email is already in use");
-        }
-
-        // Benutzer erstellen
-        User user = User.builder()
-                .username(verificationToken.getUsername())
-                .email(verificationToken.getEmail())
-                .password(verificationToken.getEncodedPassword()) // Bereits verschlüsselt
-                .firstName(verificationToken.getFirstName())
-                .lastName(verificationToken.getLastName())
-                .isActive(true)
-                .emailVerified(true)
-                .build();
-
-        Set<Role> roles = new HashSet<>();
-        Role userRole = roleRepository.findByName(Role.RoleName.ROLE_USER)
-                .orElseThrow(() -> new RuntimeException("Role not found"));
-        roles.add(userRole);
-        user.setRoles(roles);
-
-        userRepository.save(user);
-
-        // Create default tenant
-        SignupRequest request = new SignupRequest();
-        request.setUsername(verificationToken.getUsername());
-        request.setEmail(verificationToken.getEmail());
-        request.setFirstName(verificationToken.getFirstName());
-        request.setLastName(verificationToken.getLastName());
-        request.setCompanyName(verificationToken.getCompanyName());
-
-        createDefaultTenant(request, user);
-
-        // Token als verifiziert markieren
-        verificationToken.setVerified(true);
-        emailVerificationTokenRepository.save(verificationToken);
-
-        // Generate token for the new user
-        UserDetails userDetails = org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .authorities("ROLE_USER")
-                .build();
-
-        String jwtToken = jwtUtil.generateToken(userDetails);
-
-        return new AuthResponse(jwtToken, user.getUsername(), user.getEmail());
     }
 
-    private void createDefaultTenant(SignupRequest request, User user) {
+    @Transactional
+    private void createDefaultTenant(SignupRequest request, String username) {
         String workspaceName;
         String baseSlug;
 
@@ -227,41 +261,71 @@ public class AuthService {
                 baseSlug = "workspace";
             }
         } else {
-            workspaceName = (request.getFirstName() != null ? request.getFirstName() : request.getUsername()) + "'s Workspace";
-            baseSlug = request.getUsername().toLowerCase().replaceAll("[^a-z0-9]", "") + "-workspace";
+            workspaceName = (request.getFirstName() != null ? request.getFirstName() : username) + "'s Workspace";
+            baseSlug = username.toLowerCase().replaceAll("[^a-z0-9]", "") + "-workspace";
         }
 
         String slug = baseSlug;
+        log.debug("Creating default tenant for user: {} with base slug: {}", username, baseSlug);
 
         // Simple retry logic for slug uniqueness
         int attempt = 0;
+        RuntimeException lastException = null;
+
         while (attempt < 3) {
             try {
+                log.debug("Attempt {} to create tenant with slug: {}", attempt + 1, slug);
                 TenantRequest tenantRequest = TenantRequest.builder()
                         .name(workspaceName)
                         .slug(slug)
                         .build();
-                tenantService.createTenant(tenantRequest, user.getUsername());
-                break;
+                tenantService.createTenant(tenantRequest, username);
+                log.info("Successfully created default tenant for user: {} with slug: {}", username, slug);
+                return; // Success - exit method
             } catch (Exception e) {
+                lastException = new RuntimeException("Attempt " + (attempt + 1) + " failed: " + e.getMessage(), e);
+                log.warn("Failed to create tenant on attempt {}: {}. Retrying with different slug.", attempt + 1, e.getMessage());
                 attempt++;
                 slug = baseSlug + "-" + System.currentTimeMillis();
             }
         }
+
+        log.error("Failed to create default tenant for user: {} after {} attempts", username, attempt);
+        if (lastException != null) {
+            throw lastException;
+        }
+        throw new RuntimeException("Failed to create default tenant after multiple attempts");
     }
 
+
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        log.info("Login attempt for email: {}", request.getEmail());
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String token = jwtUtil.generateToken(userDetails);
+        try {
+            // Authenticate with email and password
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            // Get user details from authentication
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtil.generateToken(userDetails);
 
-        return new AuthResponse(token, user.getUsername(), user.getEmail());
+            // Load full user entity
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("Login successful for user: {}", user.getUsername());
+            return new AuthResponse(token, user.getUsername(), user.getEmail());
+
+        } catch (AuthenticationException e) {
+            // BadCredentialsException, UsernameNotFoundException, etc.
+            log.warn("Login failed for email: {} - {}", request.getEmail(), e.getMessage());
+            throw new RuntimeException("Invalid email or password");
+        } catch (Exception e) {
+            log.error("Unexpected error during login for email: {}", request.getEmail(), e);
+            throw new RuntimeException("Login failed: " + e.getMessage());
+        }
     }
 
     @Transactional

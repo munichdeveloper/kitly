@@ -43,11 +43,23 @@ public class PlanService {
      */
     @Transactional(readOnly = true)
     public Map<String, String> getPlanEntitlements(String planCode) {
-        // Try to load from database
-        Optional<PlanEntity> planOpt = planRepository.findByCodeWithEntitlements(planCode.toLowerCase());
+        if (planCode == null || planCode.trim().isEmpty()) {
+            throw new IllegalArgumentException("Plan code cannot be null or empty");
+        }
+
+        // Try to load from database using the same method as getPlan()
+        Optional<PlanEntity> planOpt = planRepository.findByCodeIgnoreCase(planCode);
 
         if (planOpt.isPresent()) {
             PlanEntity plan = planOpt.get();
+            log.debug("Found plan '{}' in database with {} entitlements",
+                     planCode, plan.getEntitlements().size());
+
+            if (plan.getEntitlements() == null || plan.getEntitlements().isEmpty()) {
+                log.debug("Plan '{}' has no entitlements defined", planCode);
+                return new LinkedHashMap<>();
+            }
+
             return plan.getEntitlements().stream()
                     .collect(Collectors.toMap(
                             pe -> pe.getEntitlementDefinition().getFullKey(),
@@ -61,9 +73,11 @@ public class PlanService {
         log.warn("Plan '{}' not found in database, falling back to static PlanCatalog", planCode);
         PlanCatalog.PlanDefinition catalogPlan = PlanCatalog.getPlan(planCode);
         if (catalogPlan != null) {
+            log.debug("Using fallback plan from PlanCatalog: {}", planCode);
             return catalogPlan.getEntitlements();
         }
 
+        log.error("Plan not found in either database or PlanCatalog: {}", planCode);
         throw new ResourceNotFoundException("Plan not found: " + planCode);
     }
 

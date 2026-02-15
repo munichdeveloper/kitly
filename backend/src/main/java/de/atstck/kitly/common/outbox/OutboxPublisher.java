@@ -42,29 +42,29 @@ public class OutboxPublisher {
     public void publishPendingEvents() {
         List<OutboxEvent> pendingEvents = outboxEventRepository
                 .findByStatus(OutboxEvent.OutboxStatus.PENDING);
-        
+
         if (pendingEvents.isEmpty()) {
             return;
         }
-        
+
         logger.info("Publishing {} pending outbox events", pendingEvents.size());
-        
+
         // Process in batches
         int processed = 0;
         for (OutboxEvent event : pendingEvents) {
             if (processed >= batchSize) {
                 break;
             }
-            
+
             try {
                 publishEvent(event);
-                
+
                 event.setStatus(OutboxEvent.OutboxStatus.PROCESSED);
                 event.setProcessedAt(LocalDateTime.now());
                 outboxEventRepository.save(event);
-                
+
                 processed++;
-                
+
             } catch (Exception e) {
                 logger.error("Error publishing outbox event: {}", event.getId(), e);
                 event.setStatus(OutboxEvent.OutboxStatus.FAILED);
@@ -73,7 +73,7 @@ public class OutboxPublisher {
                 outboxEventRepository.save(event);
             }
         }
-        
+
         logger.info("Successfully published {} outbox events", processed);
     }
     

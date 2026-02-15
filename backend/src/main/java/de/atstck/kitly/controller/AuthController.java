@@ -7,11 +7,13 @@ import de.atstck.kitly.dto.ResetPasswordRequest;
 import de.atstck.kitly.dto.SignupRequest;
 import de.atstck.kitly.service.AuthService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
     
     private final AuthService authService;
@@ -43,9 +45,12 @@ public class AuthController {
     @GetMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestParam String token) {
         try {
+            log.info("Attempting to verify email with token: {}", token);
             AuthResponse response = authService.verifyEmail(token);
+            log.info("Email verification successful for user: {}", response.getUsername());
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
+            log.error("Email verification failed with error: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
         }
     }
