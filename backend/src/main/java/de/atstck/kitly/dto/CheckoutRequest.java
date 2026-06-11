@@ -13,5 +13,7 @@ public class CheckoutRequest {
 
     @NotBlank
     private String planCode;
+
+    private String appId;
 }
 

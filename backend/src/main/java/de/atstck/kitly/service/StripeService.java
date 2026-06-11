@@ -47,7 +47,7 @@ public class StripeService {
         this.planService = planService;
     }
 
-    public String createCheckoutSession(UUID tenantId, String username, String planCode) throws StripeException {
+    public String createCheckoutSession(UUID tenantId, String username, String planCode, String appId) throws StripeException {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
@@ -61,11 +61,12 @@ public class StripeService {
 
         Price price = Price.retrieve(priceId);
         boolean isRecurringPrice = price.getRecurring() != null;
+        String checkoutFrontendUrl = resolveFrontendUrl(appId);
 
         SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
                 .setMode(isRecurringPrice ? SessionCreateParams.Mode.SUBSCRIPTION : SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(frontendUrl + "/confirm?session_id={CHECKOUT_SESSION_ID}")
-                .setCancelUrl(frontendUrl + "/cancel")
+                .setSuccessUrl(checkoutFrontendUrl + "/confirm?session_id={CHECKOUT_SESSION_ID}")
+                .setCancelUrl(checkoutFrontendUrl + "/cancel")
                 .setCustomerEmail(user.getEmail())
                 .addLineItem(
                         SessionCreateParams.LineItem.builder()
@@ -96,6 +97,20 @@ public class StripeService {
 
         Session session = Session.create(params);
         return session.getUrl();
+    }
+
+    private String resolveFrontendUrl(String appId) {
+        if (appId == null || appId.isBlank()) {
+            return frontendUrl;
+        }
+
+        String settingKey = appId + ".frontend.url";
+        String configuredFrontendUrl = platformSettingService.getSettingValue(settingKey, null);
+        if (configuredFrontendUrl == null || configuredFrontendUrl.isBlank()) {
+            return frontendUrl;
+        }
+
+        return configuredFrontendUrl;
     }
 
 

@@ -34,7 +34,7 @@ public class BillingController {
     @PostMapping("/checkout")
     public ResponseEntity<?> createCheckoutSession(@Valid @RequestBody CheckoutRequest request, Authentication authentication) {
         try {
-            String url = stripeService.createCheckoutSession(request.getTenantId(), authentication.getName(), request.getPlanCode());
+            String url = stripeService.createCheckoutSession(request.getTenantId(), authentication.getName(), request.getPlanCode(), request.getAppId());
             return ResponseEntity.ok(Map.of("url", url));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
