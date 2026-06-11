@@ -43,6 +43,8 @@ class AuthServiceTest {
     private JwtUtil jwtUtil;
     @Mock
     private TenantService tenantService;
+    @Mock
+    private PlatformSettingService platformSettingService;
 
     @InjectMocks
     private AuthService authService;

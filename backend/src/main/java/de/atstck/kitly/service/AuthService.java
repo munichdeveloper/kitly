@@ -13,7 +13,6 @@ import de.atstck.kitly.repository.PasswordResetTokenRepository;
 import de.atstck.kitly.repository.RoleRepository;
 import de.atstck.kitly.repository.UserRepository;
 import de.atstck.kitly.security.JwtUtil;
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +33,8 @@ import java.util.UUID;
 @Slf4j
 public class AuthService {
 
+    private static final String EMAIL_VERIFICATION_ENABLED_PLATFORM_KEY_SUFFIX = ".email.verification.enabled";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,6 +44,7 @@ public class AuthService {
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
+    private final PlatformSettingService platformSettingService;
 
     @Value("${app.email-verification.enabled:false}")
     private boolean emailVerificationEnabled;
@@ -58,7 +60,8 @@ public class AuthService {
                        JwtUtil jwtUtil, TenantService tenantService,
                        EmailVerificationTokenRepository emailVerificationTokenRepository,
                        PasswordResetTokenRepository passwordResetTokenRepository,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       PlatformSettingService platformSettingService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -68,6 +71,7 @@ public class AuthService {
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
+        this.platformSettingService = platformSettingService;
     }
 
     @Transactional
@@ -80,13 +84,40 @@ public class AuthService {
             throw new RuntimeException("Email is already in use");
         }
 
-        // Wenn E-Mail-Verifizierung aktiviert ist, Token erstellen und E-Mail senden
-        if (emailVerificationEnabled) {
+        // App-spezifisches Plattform-Setting nutzen, ansonsten globales Fallback
+        if (isEmailVerificationEnabled(request.getAppId())) {
             return createVerificationTokenAndSendEmail(request);
         }
 
         // Ansonsten direkt Benutzer erstellen (alte Logik)
         return createUserDirectly(request);
+    }
+
+    private boolean isEmailVerificationEnabled(String appId) {
+        if (appId == null || appId.trim().isEmpty()) {
+            return emailVerificationEnabled;
+        }
+
+        try {
+            String settingKey = appId.trim() + EMAIL_VERIFICATION_ENABLED_PLATFORM_KEY_SUFFIX;
+            String settingValue = platformSettingService.getSettingValue(settingKey, null);
+
+            if (settingValue == null || settingValue.trim().isEmpty()) {
+                return emailVerificationEnabled;
+            }
+
+            if (!"true".equalsIgnoreCase(settingValue) && !"false".equalsIgnoreCase(settingValue)) {
+                log.warn("Invalid value '{}' for platform setting '{}' (appId '{}'). Falling back to global config.",
+                        settingValue, settingKey, appId);
+                return emailVerificationEnabled;
+            }
+
+            return Boolean.parseBoolean(settingValue);
+        } catch (RuntimeException ex) {
+            log.warn("Failed to resolve app-specific email verification setting for appId '{}'. Falling back to global config.",
+                    appId, ex);
+            return emailVerificationEnabled;
+        }
     }
 
     private AuthResponse createVerificationTokenAndSendEmail(SignupRequest request) {

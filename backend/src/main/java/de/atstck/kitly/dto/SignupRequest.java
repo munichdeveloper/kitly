@@ -26,4 +26,6 @@ public class SignupRequest {
     private String lastName;
 
     private String companyName;
+
+    private String appId;
 }
