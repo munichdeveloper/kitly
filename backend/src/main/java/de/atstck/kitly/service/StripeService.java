@@ -59,8 +59,11 @@ public class StripeService {
             throw new IllegalArgumentException("No price ID configured for plan: " + planCode);
         }
 
-        SessionCreateParams params = SessionCreateParams.builder()
-                .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
+        Price price = Price.retrieve(priceId);
+        boolean isRecurringPrice = price.getRecurring() != null;
+
+        SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
+                .setMode(isRecurringPrice ? SessionCreateParams.Mode.SUBSCRIPTION : SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(frontendUrl + "/confirm?session_id={CHECKOUT_SESSION_ID}")
                 .setCancelUrl(frontendUrl + "/cancel")
                 .setCustomerEmail(user.getEmail())
@@ -70,15 +73,26 @@ public class StripeService {
                                 .setPrice(priceId)
                                 .build()
                 )
-                .setSubscriptionData(
-                        SessionCreateParams.SubscriptionData.builder()
-                                .putMetadata("tenant_id", tenant.getId().toString())
-                                .putMetadata("plan_code", planCode)
-                                .build()
-                )
                 .putMetadata("tenant_id", tenant.getId().toString())
-                .putMetadata("plan_code", planCode)
-                .build();
+                .putMetadata("plan_code", planCode);
+
+        if (isRecurringPrice) {
+            paramsBuilder.setSubscriptionData(
+                    SessionCreateParams.SubscriptionData.builder()
+                            .putMetadata("tenant_id", tenant.getId().toString())
+                            .putMetadata("plan_code", planCode)
+                            .build()
+            );
+        } else {
+            paramsBuilder.setPaymentIntentData(
+                    SessionCreateParams.PaymentIntentData.builder()
+                            .putMetadata("tenant_id", tenant.getId().toString())
+                            .putMetadata("plan_code", planCode)
+                            .build()
+            );
+        }
+
+        SessionCreateParams params = paramsBuilder.build();
 
         Session session = Session.create(params);
         return session.getUrl();
