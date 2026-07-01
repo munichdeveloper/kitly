@@ -119,9 +119,9 @@ function CheckoutContent() {
               <div className="flex items-start gap-3 rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-amber-200">
                 <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold">Stripe test mode UI is enabled</p>
+                  <p className="font-semibold">Stripe test checkout indicator is enabled</p>
                   <p className="mt-1 text-sm text-amber-100/80">
-                    Use Stripe test cards only. The backend must also be switched to Stripe test mode.
+                    This banner is only a QA hint. Stripe test or live mode is controlled by the backend configuration.
                   </p>
                 </div>
               </div>

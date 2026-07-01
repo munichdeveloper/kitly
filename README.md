@@ -236,23 +236,25 @@ npm run test:coverage
 
 ### Stripe E2E Test Mode
 
-The checkout flow can be tested end to end with Stripe test mode without exposing a browser flag that can switch live billing.
+The checkout flow can be tested end to end with Stripe test mode. Stripe mode is controlled exclusively by backend platform settings; the frontend cannot switch between test and live billing.
 
-Required setup:
+Required backend setup:
 - Set backend platform setting `stripe.mode` to `test`.
 - Configure `stripe.test.api_key` and `stripe.test.webhook_secret`.
 - Configure test price IDs as `stripe.plan.{PLAN_CODE}` for the plans used in the test.
-- Start the frontend with `NEXT_PUBLIC_STRIPE_TEST_MODE=true`.
 - Run `stripe listen --forward-to localhost:8080/api/billing/webhooks/stripe`.
+
+Optional frontend QA signal:
+- Start the frontend with `NEXT_PUBLIC_STRIPE_TEST_MODE=true` to show a visible test-checkout indicator on `/checkout`.
+- This flag is UI-only. If the backend is in `live` mode, checkout still uses live Stripe.
+- If the backend is in `test` mode, checkout uses Stripe test mode even without this frontend flag.
 
 Recommended E2E flow:
 - Sign up a fresh user and create a workspace.
 - Open `/plans`, select a plan, and continue on `/checkout`.
-- Verify the test-mode warning is visible.
+- If `NEXT_PUBLIC_STRIPE_TEST_MODE=true` is set, verify the test-checkout indicator is visible.
 - Pay in Stripe with test card `4242 4242 4242 4242`.
 - Land on `/confirm`, wait for the webhook, then verify the workspace billing page shows the updated subscription.
-
-The frontend flag is intentionally UI-only. The real Stripe mode is owned by backend platform settings, so an E2E run cannot silently flip production billing from the browser.
 
 ## 📦 Technologies
 
