@@ -159,7 +159,8 @@ export interface PlanDefinition {
 // Billing Types
 export interface CheckoutRequest {
   tenantId: string;
-  plan: 'STARTER' | 'BUSINESS' | 'ENTERPRISE';
+  planCode: string;
+  appId?: string;
 }
 
 export interface CheckoutResponse {
