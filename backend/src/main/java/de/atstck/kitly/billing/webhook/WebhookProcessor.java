@@ -54,6 +54,14 @@ public class WebhookProcessor {
             "invoice_payment.paid"
     );
 
+    /**
+     * Exposed for tests that need to generate fixtures for every event type the
+     * processor knows how to handle (see StripeWebhookFixtures).
+     */
+    public static Set<String> getSupportedEventTypes() {
+        return SUPPORTED_EVENTS;
+    }
+
     private final WebhookInboxRepository webhookInboxRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final TenantRepository tenantRepository;

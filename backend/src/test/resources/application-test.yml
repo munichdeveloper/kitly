@@ -9,7 +9,11 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    locations: classpath:db/migration
+    # db/testdata provides a versioned Stripe test-mode fixture (see
+    # db/testdata/R__seed_stripe_test_mode.sql) on top of the regular
+    # schema migrations, so every test/CI run starts from a known Stripe
+    # configuration instead of a manually maintained platform_settings row.
+    locations: classpath:db/migration,classpath:db/testdata
     clean-disabled: false
 
   jpa:
