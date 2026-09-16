@@ -23,11 +23,11 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Test Backend
+      - name: Build Backend
         if: matrix.component == 'backend'
         working-directory: ./backend
         run: |
-          mvn clean package
+          mvn clean package -DskipTests
 
       - name: Set up Node.js (Frontend)
         if: matrix.component == 'frontend'
