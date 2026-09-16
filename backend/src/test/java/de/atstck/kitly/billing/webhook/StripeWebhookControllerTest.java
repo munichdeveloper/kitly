@@ -182,7 +182,7 @@ class StripeWebhookControllerTest {
     @ParameterizedTest(name = "signed webhook for event type \"{0}\" is accepted")
     @MethodSource("supportedEventTypes")
     void testAllSupportedEventTypes_AreAcceptedByRealController(String eventType) {
-        // Given: A validly signed payload for each of the 16 event types WebhookProcessor supports
+        // Given: A validly signed payload for each event type WebhookProcessor.SUPPORTED_EVENTS lists
         String payload = StripeWebhookFixtures.payloadFor(eventType);
         String signature = StripeWebhookFixtures.signedHeader(payload, TEST_SECRET);
 

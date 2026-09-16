@@ -5,10 +5,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.support.EncodedResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
 
 /**
  * Base class for integration tests using Testcontainers.
@@ -64,10 +70,21 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected PlanRepository planRepository;
 
+    @Autowired
+    protected DataSource dataSource;
+
     @BeforeEach
-    void baseSetup() {
-        // Ensure database is clean before each test
-        // Repositories are injected and available for use
+    void baseSetup() throws Exception {
+        // The Postgres container is reused (withReuse(true)) across test runs, and
+        // Flyway only (re-)applies R__seed_stripe_test_mode.sql when its checksum
+        // changes - not on every run. Re-running the same idempotent upsert here
+        // guarantees the known Stripe test-mode configuration for every single
+        // test, regardless of what an earlier test (in this run or a previous one
+        // against the reused container) may have changed in platform_settings.
+        try (Connection connection = dataSource.getConnection()) {
+            ScriptUtils.executeSqlScript(connection,
+                    new EncodedResource(new ClassPathResource("db/testdata/R__seed_stripe_test_mode.sql")));
+        }
     }
 
     @AfterEach

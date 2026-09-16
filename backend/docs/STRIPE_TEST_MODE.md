@@ -24,9 +24,14 @@ Test/CI runs now get a **dedicated, versioned fixture**:
 - It only runs for the `test` Spring profile: `application-test.yml` adds
   `classpath:db/testdata` as an extra Flyway location, on top of the regular
   `classpath:db/migration`. Production/staging never see it.
-- Because it uses `INSERT ... ON CONFLICT (setting_key) DO UPDATE`, it is
-  idempotent and safe to run against the reused Testcontainers Postgres
-  instance (`BaseIntegrationTest`) across multiple test runs.
+- It uses `INSERT ... ON CONFLICT (setting_key) DO UPDATE`, so it is
+  idempotent. That alone is **not** enough for a per-run guarantee though:
+  Flyway only re-applies a repeatable (`R__`) migration when its checksum
+  changes, and `BaseIntegrationTest` reuses its Testcontainers Postgres
+  instance (`withReuse(true)`) across runs. So `BaseIntegrationTest#baseSetup()`
+  re-executes this exact script via JDBC before *every* test, which is what
+  actually guarantees a known starting state each time - the SQL file is the
+  versioned source of truth for the values, not the sole reset mechanism.
 - None of the seeded values are real Stripe credentials.
 
 Anyone running the backend test suite (locally or in CI) therefore starts
@@ -37,9 +42,9 @@ just in a database row someone configured by hand.
 
 `StripeWebhookFixtures` (`src/test/java/de/atstck/kitly/billing/webhook/`)
 generates a JSON payload plus a validly signed `Stripe-Signature` header for
-any of the 16 event types in `WebhookProcessor.SUPPORTED_EVENTS` (exposed via
-the now-public `WebhookProcessor.getSupportedEventTypes()`), without any
-network call:
+any event type in `WebhookProcessor.SUPPORTED_EVENTS` (exposed via the
+now-public `WebhookProcessor.getSupportedEventTypes()`), without any network
+call:
 
 ```java
 String payload = StripeWebhookFixtures.payloadFor("checkout.session.completed");
@@ -56,7 +61,7 @@ verified by the real `Webhook.constructEvent(...)` call in
 This is used by:
 
 - `StripeWebhookControllerTest` - a parameterized test sends a signed
-  fixture for all 16 supported event types through the real controller, plus
+  fixture for every supported event type through the real controller, plus
   dedicated tests for the success path (valid signature → `webhook_inbox`
   entry) and the idempotency path (same `event_id` delivered twice).
 - `WebhookProcessorTest` - covers the event types that previously had no

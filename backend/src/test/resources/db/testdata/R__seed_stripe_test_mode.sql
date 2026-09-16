@@ -2,10 +2,19 @@
 --
 -- This repeatable Flyway migration only runs for the "test" Spring profile
 -- (see src/test/resources/application-test.yml, which adds
--- classpath:db/testdata as an extra Flyway location). It guarantees that
--- every local test run and every CI run starts from the same, known Stripe
--- test-mode configuration instead of depending on manually maintained
--- runtime settings in `platform_settings`.
+-- classpath:db/testdata as an extra Flyway location), giving every local
+-- test run and every CI run a known Stripe test-mode configuration to start
+-- from, instead of depending on manually maintained runtime settings in
+-- `platform_settings`.
+--
+-- Note: Flyway only (re-)applies a repeatable (R__) migration when its
+-- checksum changes, not on every `migrate` call - and BaseIntegrationTest
+-- reuses its Testcontainers Postgres instance (withReuse(true)) across runs.
+-- So this file alone does NOT guarantee these rows are reset before every
+-- single test; BaseIntegrationTest#baseSetup() re-runs this exact script via
+-- JDBC before each test for that guarantee. This file is still the source of
+-- truth for the values (versioned in git) and is what actually seeds a fresh
+-- database/CI job.
 --
 -- None of these values are real Stripe credentials - "sk_test_..." /
 -- "whsec_..." / "price_..." here are deterministic placeholders used only to

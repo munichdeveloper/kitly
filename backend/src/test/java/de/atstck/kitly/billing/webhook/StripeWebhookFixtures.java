@@ -96,23 +96,14 @@ public final class StripeWebhookFixtures {
         String tenantId = UUID.randomUUID().toString();
 
         return switch (eventType) {
-            case "customer.subscription.created",
-                 "customer.subscription.updated",
-                 "customer.subscription.deleted" -> {
-                Map<String, Object> price = new LinkedHashMap<>();
-                price.put("id", "price_test_starter_ci");
-                price.put("metadata", Map.of("plan", "starter"));
-
-                Map<String, Object> item = Map.of("price", price);
-
-                Map<String, Object> subscription = new LinkedHashMap<>();
-                subscription.put("id", "sub_test_" + UUID.randomUUID());
-                subscription.put("status", "active");
-                subscription.put("created", now);
-                subscription.put("metadata", Map.of("tenant_id", tenantId));
-                subscription.put("items", Map.of("data", java.util.List.of(item)));
-                yield subscription;
-            }
+            case "customer.subscription.created", "customer.subscription.updated" ->
+                    subscriptionObject(tenantId, now, "active");
+            case "customer.subscription.deleted" ->
+                    // "deleted" is Stripe's cancellation event; WebhookProcessor routes it through
+                    // the same handler as created/updated, so the status must actually be
+                    // "canceled" here - otherwise this fixture would re-activate the subscription
+                    // instead of exercising the cancellation path.
+                    subscriptionObject(tenantId, now, "canceled");
             case "checkout.session.completed" -> {
                 Map<String, Object> session = new LinkedHashMap<>();
                 session.put("id", "cs_test_" + UUID.randomUUID());
@@ -160,6 +151,22 @@ public final class StripeWebhookFixtures {
             }
             default -> Map.of("id", "obj_test_" + UUID.randomUUID());
         };
+    }
+
+    private static Map<String, Object> subscriptionObject(String tenantId, long createdAt, String status) {
+        Map<String, Object> price = new LinkedHashMap<>();
+        price.put("id", "price_test_starter_ci");
+        price.put("metadata", Map.of("plan", "starter"));
+
+        Map<String, Object> item = Map.of("price", price);
+
+        Map<String, Object> subscription = new LinkedHashMap<>();
+        subscription.put("id", "sub_test_" + UUID.randomUUID());
+        subscription.put("status", status);
+        subscription.put("created", createdAt);
+        subscription.put("metadata", Map.of("tenant_id", tenantId));
+        subscription.put("items", Map.of("data", java.util.List.of(item)));
+        return subscription;
     }
 
     private static Map<String, Object> invoiceObject(String status, boolean paid) {
