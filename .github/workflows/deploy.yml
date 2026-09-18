@@ -23,7 +23,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Test Backend
+      - name: Build Backend
         if: matrix.component == 'backend'
         working-directory: ./backend
         run: |

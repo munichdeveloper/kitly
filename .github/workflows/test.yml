@@ -20,9 +20,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Backend
+      - name: Test Backend
         working-directory: ./backend
-        run: mvn clean package -DskipTests
+        run: mvn clean package
 
       - name: Run Backend Linting
         working-directory: ./backend
