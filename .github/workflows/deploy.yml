@@ -57,9 +57,13 @@ jobs:
         id: commit_info
         env:
           RAW_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          RAW_AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
         run: |
-          MESSAGE=$(printf '%s' "$RAW_COMMIT_MESSAGE" | head -n1)
+          SUBJECT=$(printf '%s' "$RAW_COMMIT_MESSAGE" | head -n1)
+          MESSAGE=$(printf '%s' "$SUBJECT" | jq -Rs '.' | sed -e 's/^"//' -e 's/"$//')
+          AUTHOR=$(printf '%s' "$RAW_AUTHOR_NAME" | jq -Rs '.' | sed -e 's/^"//' -e 's/"$//')
           echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "author=$AUTHOR" >> "$GITHUB_OUTPUT"
 
       - name: Notify Slack - Deployment Started
         uses: slackapi/slack-github-action@v1.27.0
@@ -92,7 +96,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Author:*\n${{ github.event.head_commit.author.name }}"
+                      "text": "*Author:*\n${{ steps.commit_info.outputs.author }}"
                     }
                   ]
                 },
@@ -215,7 +219,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Author:*\n${{ github.event.head_commit.author.name }}"
+                      "text": "*Author:*\n${{ steps.commit_info.outputs.author }}"
                     }
                   ]
                 },
@@ -264,7 +268,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Author:*\n${{ github.event.head_commit.author.name }}"
+                      "text": "*Author:*\n${{ steps.commit_info.outputs.author }}"
                     }
                   ]
                 },
