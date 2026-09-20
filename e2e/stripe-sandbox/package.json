@@ -1,0 +1,17 @@
+{
+  "name": "kitly-stripe-sandbox-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Nightly sandbox E2E test that drives a real Stripe test-mode checkout end-to-end and verifies the resulting subscription/entitlement sync (see GitHub issue #40).",
+  "scripts": {
+    "start": "node run.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0",
+    "stripe": "^16.12.0"
+  }
+}

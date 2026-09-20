@@ -256,6 +256,8 @@ Recommended E2E flow:
 - Pay in Stripe with test card `4242 4242 4242 4242`.
 - Land on `/confirm`, wait for the webhook, then verify the workspace billing page shows the updated subscription.
 
+This manual flow is now also automated as a nightly CI job (not run on every PR) that drives the same checkout with Playwright and verifies subscription/entitlement sync end to end - see [`e2e/stripe-sandbox/README.md`](e2e/stripe-sandbox/README.md) and `.github/workflows/stripe-sandbox-e2e.yml`.
+
 ## 📦 Technologies
 
 ### Backend Stack
