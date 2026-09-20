@@ -1,0 +1,224 @@
+name: Stripe Sandbox E2E
+
+# Regularly (not on every PR) closes a real Stripe test-mode checkout end to
+# end - real checkout session, real test card, real webhook delivery - and
+# verifies the resulting subscription/entitlement sync. See issue #40.
+#
+# This is deliberately separate from the fast `Test` workflow: it depends on
+# the real Stripe API, drives Stripe's hosted Checkout page with a browser,
+# and waits for a real webhook delivery, so it is slower and more prone to
+# transient flakiness than the mocked/synthetic tests in the main suite.
+on:
+  schedule:
+    - cron: "0 2 * * *" # Nightly at 02:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  stripe-sandbox-e2e:
+    if: github.repository == 'munichdeveloper/kitly'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: kitlydb
+          POSTGRES_USER: postgres
+          # Generated per-run rather than a static literal, purely to keep
+          # secret scanners from flagging a hardcoded credential - this
+          # database only ever exists for the lifetime of this job, on the
+          # runner's localhost, and is destroyed afterwards.
+          POSTGRES_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      API_BASE_URL: http://localhost:8080
+      E2E_PLAN_CODE: STARTER
+      TEST_DB_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+      STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+      STRIPE_SANDBOX_PRICE_STARTER: ${{ secrets.STRIPE_SANDBOX_PRICE_STARTER }}
+      STRIPE_SANDBOX_PRICE_BUSINESS: ${{ secrets.STRIPE_SANDBOX_PRICE_BUSINESS }}
+      STRIPE_SANDBOX_PRICE_ENTERPRISE: ${{ secrets.STRIPE_SANDBOX_PRICE_ENTERPRISE }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify required secrets are configured
+        run: |
+          missing=()
+          [ -z "$STRIPE_SANDBOX_SECRET_KEY" ] && missing+=("STRIPE_SANDBOX_SECRET_KEY")
+          [ -z "$STRIPE_SANDBOX_PRICE_STARTER" ] && missing+=("STRIPE_SANDBOX_PRICE_STARTER")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required repository secrets for the Stripe sandbox E2E test: ${missing[*]}. See e2e/stripe-sandbox/README.md."
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Build backend
+        working-directory: ./backend
+        run: mvn -B -DskipTests clean package
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ./e2e/stripe-sandbox/package-lock.json
+
+      - name: Install Stripe CLI
+        run: |
+          curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/stripe.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" \
+            | sudo tee -a /etc/apt/sources.list.d/stripe.list
+          sudo apt-get update
+          sudo apt-get install --yes stripe
+
+      - name: Start Stripe CLI webhook forwarding
+        run: |
+          nohup stripe listen \
+            --api-key "$STRIPE_SANDBOX_SECRET_KEY" \
+            --forward-to http://localhost:8080/api/billing/webhooks/stripe \
+            > stripe-listen.log 2>&1 &
+          echo $! > stripe-listen.pid
+
+          for _ in $(seq 1 30); do
+            grep -q "whsec_" stripe-listen.log 2>/dev/null && break
+            sleep 1
+          done
+
+          SECRET=$(grep -o 'whsec_[A-Za-z0-9]*' stripe-listen.log | head -n1 || true)
+          if [ -z "$SECRET" ]; then
+            echo "::error::Could not obtain a webhook signing secret from 'stripe listen'."
+            cat stripe-listen.log
+            exit 1
+          fi
+          echo "STRIPE_WEBHOOK_SECRET=$SECRET" >> "$GITHUB_ENV"
+
+      - name: Start backend (bootstrap database schema)
+        working-directory: ./backend
+        run: |
+          BACKEND_JAR=$(ls target/*.jar | grep -v '/original-' | head -n1)
+          echo "Using backend jar: $BACKEND_JAR"
+          nohup java -jar "$BACKEND_JAR" \
+            --spring.datasource.url=jdbc:postgresql://localhost:5432/kitlydb \
+            --spring.datasource.username=postgres \
+            "--spring.datasource.password=$TEST_DB_PASSWORD" \
+            --app.frontend-url=https://example.com \
+            --app.email-verification.enabled=false \
+            > ../backend-bootstrap.log 2>&1 &
+          echo $! > ../backend.pid
+
+      - name: Wait for backend health (bootstrap)
+        run: ./e2e/stripe-sandbox/wait-for-health.sh http://localhost:8080/api/health 90
+
+      - name: Stop backend
+        run: |
+          kill "$(cat backend.pid)"
+          sleep 3
+
+      - name: Seed real Stripe test-mode settings
+        run: |
+          PGPASSWORD="$TEST_DB_PASSWORD" psql -h localhost -U postgres -d kitlydb \
+            -v ON_ERROR_STOP=1 \
+            -v api_key="$STRIPE_SANDBOX_SECRET_KEY" \
+            -v webhook_secret="$STRIPE_WEBHOOK_SECRET" \
+            -v price_starter="$STRIPE_SANDBOX_PRICE_STARTER" \
+            -v price_business="${STRIPE_SANDBOX_PRICE_BUSINESS:-}" \
+            -v price_enterprise="${STRIPE_SANDBOX_PRICE_ENTERPRISE:-}" \
+            -f e2e/stripe-sandbox/seed-platform-settings.sql
+
+      - name: Restart backend with Stripe test-mode settings
+        working-directory: ./backend
+        run: |
+          BACKEND_JAR=$(ls target/*.jar | grep -v '/original-' | head -n1)
+          echo "Using backend jar: $BACKEND_JAR"
+          nohup java -jar "$BACKEND_JAR" \
+            --spring.datasource.url=jdbc:postgresql://localhost:5432/kitlydb \
+            --spring.datasource.username=postgres \
+            "--spring.datasource.password=$TEST_DB_PASSWORD" \
+            --app.frontend-url=https://example.com \
+            --app.email-verification.enabled=false \
+            > ../backend.log 2>&1 &
+          echo $! > ../backend.pid
+
+      - name: Wait for backend health
+        run: ./e2e/stripe-sandbox/wait-for-health.sh http://localhost:8080/api/health 90
+
+      - name: Install E2E test dependencies
+        working-directory: ./e2e/stripe-sandbox
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+
+      - name: Run Stripe sandbox E2E purchase-chain test
+        working-directory: ./e2e/stripe-sandbox
+        run: node run.mjs
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stripe-sandbox-e2e-diagnostics
+          path: |
+            backend-bootstrap.log
+            backend.log
+            stripe-listen.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop background processes
+        if: always()
+        run: |
+          [ -f backend.pid ] && kill "$(cat backend.pid)" 2>/dev/null || true
+          [ -f stripe-listen.pid ] && kill "$(cat stripe-listen.pid)" 2>/dev/null || true
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "❌ Stripe Sandbox E2E failed",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "❌ Stripe Sandbox E2E failed"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "The nightly real Stripe test-mode checkout→webhook→entitlement sync test failed. This is the only automated coverage of the real Stripe integration - please investigate."
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow Run>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
