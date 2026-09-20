@@ -98,7 +98,7 @@ public class WebhookProcessor {
     /**
      * Process pending webhooks every 5 seconds
      */
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(cron = "${webhook.processor.schedule.cron:*/5 * * * * *}")
     public void processPendingWebhooks() {
         // Use ordered query to process events in sequence
         List<WebhookInbox> pendingWebhooks = webhookInboxRepository

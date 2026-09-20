@@ -46,7 +46,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-@TestPropertySource(properties = "spring.task.scheduling.enabled=false")
+@TestPropertySource(properties = "webhook.processor.schedule.cron=-")
 public class PurchaseFlowIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
