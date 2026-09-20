@@ -30,6 +30,18 @@ function requireEnv(name, value) {
 
 requireEnv('STRIPE_SECRET_KEY', STRIPE_SECRET_KEY);
 
+// This script pays a real Stripe test card through the real Stripe API and
+// is also documented for local, ad-hoc runs (see README.md) - refuse to run
+// against anything that isn't clearly a test-mode key, so a mistyped/wrong
+// key can never create a real charge or subscription.
+if (!STRIPE_SECRET_KEY.startsWith('sk_test_')) {
+  console.error(
+    'STRIPE_SECRET_KEY must be a Stripe TEST-mode secret key (starting with sk_test_). ' +
+      'Refusing to run against what looks like a live key.'
+  );
+  process.exit(1);
+}
+
 const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 const runId = crypto.randomUUID().slice(0, 8);
@@ -245,11 +257,43 @@ async function waitForActiveSubscription(token, tenantId) {
   );
 }
 
+// Representative entitlement values seeded by
+// backend/src/main/resources/db/migration/V22__create_dynamic_plans.sql for
+// each default plan. Checking these (not just planCode, which EntitlementService
+// derives straight from the active subscription regardless of whether
+// entitlement sync actually ran) means this E2E can actually catch a broken
+// entitlement sync instead of only re-confirming the subscription exists.
+const KNOWN_PLAN_ENTITLEMENTS = {
+  STARTER: { ai_assistant: 'false', projects: '10', api_calls_per_month: '1000' },
+  BUSINESS: { ai_assistant: 'true', projects: '100', api_calls_per_month: '10000' },
+  ENTERPRISE: { ai_assistant: 'true', projects: 'unlimited', api_calls_per_month: 'unlimited' },
+};
+
 function assertEntitlementsMatchPlan(entitlements, planCode) {
   if (!entitlements || entitlements.planCode?.toUpperCase() !== planCode.toUpperCase()) {
     throw new Error(
       `Entitlements do not reflect the purchased plan ${planCode}: ${JSON.stringify(entitlements)}`
     );
+  }
+
+  if (!Array.isArray(entitlements.items) || entitlements.items.length === 0) {
+    throw new Error(`Entitlement sync produced no items for plan ${planCode}: ${JSON.stringify(entitlements)}`);
+  }
+
+  if (!(Number(entitlements.entitlementVersion) > 0)) {
+    throw new Error(`Entitlement version was not set/bumped: ${JSON.stringify(entitlements)}`);
+  }
+
+  const expectedItems = KNOWN_PLAN_ENTITLEMENTS[planCode.toUpperCase()];
+  if (expectedItems) {
+    const itemsByKey = Object.fromEntries(entitlements.items.map((item) => [item.key, item.value]));
+    for (const [key, expectedValue] of Object.entries(expectedItems)) {
+      if (itemsByKey[key] !== expectedValue) {
+        throw new Error(
+          `Entitlement "${key}" for plan ${planCode} is "${itemsByKey[key]}", expected "${expectedValue}": ${JSON.stringify(entitlements)}`
+        );
+      }
+    }
   }
 }
 

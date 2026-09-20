@@ -15,7 +15,14 @@ on:
 
 jobs:
   stripe-sandbox-e2e:
-    if: github.repository == 'munichdeveloper/kitly'
+    # Scheduled runs always use the default branch. A manual workflow_dispatch
+    # run can pick any ref, and that ref's checked-out code/workflow runs with
+    # the Stripe secrets below - so restrict manual runs to `main` as well,
+    # rather than letting anyone with dispatch access run this against an
+    # arbitrary branch.
+    if: |
+      github.repository == 'munichdeveloper/kitly' &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -38,19 +45,22 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
+    # Not made job-level on purpose: the Stripe secrets below are only added
+    # to the steps that actually need them (see each step's own `env:`), so
+    # steps like checkout/setup-java/setup-node/npm/playwright-install never
+    # have them in their environment.
     env:
       API_BASE_URL: http://localhost:8080
       E2E_PLAN_CODE: STARTER
       TEST_DB_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
-      STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
-      STRIPE_SANDBOX_PRICE_STARTER: ${{ secrets.STRIPE_SANDBOX_PRICE_STARTER }}
-      STRIPE_SANDBOX_PRICE_BUSINESS: ${{ secrets.STRIPE_SANDBOX_PRICE_BUSINESS }}
-      STRIPE_SANDBOX_PRICE_ENTERPRISE: ${{ secrets.STRIPE_SANDBOX_PRICE_ENTERPRISE }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Verify required secrets are configured
+        env:
+          STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+          STRIPE_SANDBOX_PRICE_STARTER: ${{ secrets.STRIPE_SANDBOX_PRICE_STARTER }}
         run: |
           missing=()
           [ -z "$STRIPE_SANDBOX_SECRET_KEY" ] && missing+=("STRIPE_SANDBOX_SECRET_KEY")
@@ -101,6 +111,8 @@ jobs:
           sudo apt-get install --yes stripe
 
       - name: Start Stripe CLI webhook forwarding
+        env:
+          STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
         run: |
           nohup stripe listen \
             --api-key "$STRIPE_SANDBOX_SECRET_KEY" \
@@ -144,6 +156,11 @@ jobs:
           sleep 3
 
       - name: Seed real Stripe test-mode settings
+        env:
+          STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+          STRIPE_SANDBOX_PRICE_STARTER: ${{ secrets.STRIPE_SANDBOX_PRICE_STARTER }}
+          STRIPE_SANDBOX_PRICE_BUSINESS: ${{ secrets.STRIPE_SANDBOX_PRICE_BUSINESS }}
+          STRIPE_SANDBOX_PRICE_ENTERPRISE: ${{ secrets.STRIPE_SANDBOX_PRICE_ENTERPRISE }}
         run: |
           PGPASSWORD="$TEST_DB_PASSWORD" psql -h localhost -U postgres -d kitlydb \
             -v ON_ERROR_STOP=1 \
