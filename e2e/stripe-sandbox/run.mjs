@@ -301,9 +301,9 @@ async function cleanupStripeTestData() {
 
 async function main() {
   const { tenantId, token } = await signupAndCreateTenant();
-  const checkoutUrl = await startCheckout(token, tenantId);
 
   try {
+    const checkoutUrl = await startCheckout(token, tenantId);
     await completeCheckoutInBrowser(checkoutUrl);
 
     console.log('Waiting for the real Stripe webhook to be delivered and processed...');

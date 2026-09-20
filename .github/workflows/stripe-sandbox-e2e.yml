@@ -60,6 +60,18 @@ jobs:
             exit 1
           fi
 
+          # Refuse to run against a live Stripe key: this job pays real test
+          # cards through Stripe's API and would create real charges/
+          # subscriptions if STRIPE_SANDBOX_SECRET_KEY was ever misconfigured
+          # with a live key.
+          case "$STRIPE_SANDBOX_SECRET_KEY" in
+            sk_test_*) ;;
+            *)
+              echo "::error::STRIPE_SANDBOX_SECRET_KEY must be a Stripe TEST-mode secret key (starting with sk_test_). Refusing to run against what looks like a live key."
+              exit 1
+              ;;
+          esac
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -112,7 +124,7 @@ jobs:
       - name: Start backend (bootstrap database schema)
         working-directory: ./backend
         run: |
-          BACKEND_JAR=$(ls target/*.jar | grep -v '/original-' | head -n1)
+          BACKEND_JAR=$(../e2e/stripe-sandbox/find-backend-jar.sh target)
           echo "Using backend jar: $BACKEND_JAR"
           nohup java -jar "$BACKEND_JAR" \
             --spring.datasource.url=jdbc:postgresql://localhost:5432/kitlydb \
@@ -145,7 +157,7 @@ jobs:
       - name: Restart backend with Stripe test-mode settings
         working-directory: ./backend
         run: |
-          BACKEND_JAR=$(ls target/*.jar | grep -v '/original-' | head -n1)
+          BACKEND_JAR=$(../e2e/stripe-sandbox/find-backend-jar.sh target)
           echo "Using backend jar: $BACKEND_JAR"
           nohup java -jar "$BACKEND_JAR" \
             --spring.datasource.url=jdbc:postgresql://localhost:5432/kitlydb \
@@ -162,7 +174,7 @@ jobs:
       - name: Install E2E test dependencies
         working-directory: ./e2e/stripe-sandbox
         run: |
-          npm install
+          npm ci
           npx playwright install --with-deps chromium
 
       - name: Run Stripe sandbox E2E purchase-chain test
@@ -170,6 +182,20 @@ jobs:
         run: node run.mjs
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+
+      - name: Stop background processes
+        if: always()
+        run: |
+          [ -f backend.pid ] && kill "$(cat backend.pid)" 2>/dev/null || true
+          [ -f stripe-listen.pid ] && kill "$(cat stripe-listen.pid)" 2>/dev/null || true
+
+      - name: Redact secrets from diagnostics logs
+        if: failure()
+        run: |
+          # stripe-listen.log contains the run's whsec_... signing secret in
+          # plaintext ("Ready! Your webhook signing secret is whsec_...") -
+          # strip it before this log is uploaded as a build artifact.
+          [ -f stripe-listen.log ] && sed -i 's/whsec_[A-Za-z0-9]\+/whsec_[REDACTED]/g' stripe-listen.log || true
 
       - name: Upload diagnostics on failure
         if: failure()
@@ -182,12 +208,6 @@ jobs:
             stripe-listen.log
           if-no-files-found: ignore
           retention-days: 14
-
-      - name: Stop background processes
-        if: always()
-        run: |
-          [ -f backend.pid ] && kill "$(cat backend.pid)" 2>/dev/null || true
-          [ -f stripe-listen.pid ] && kill "$(cat stripe-listen.pid)" 2>/dev/null || true
 
       - name: Notify Slack on failure
         if: failure()
@@ -222,3 +242,4 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
