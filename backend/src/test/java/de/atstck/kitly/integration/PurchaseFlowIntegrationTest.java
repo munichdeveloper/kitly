@@ -203,14 +203,14 @@ public class PurchaseFlowIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void whenTenantHasNoOwner_thenWebhookFlowCompletesButNoOnboardingMailIsSent() {
-        Tenant tenantWithoutOwner = createTenantWithoutOwner("ownerless-tenant");
+    void whenExistingTenantHasNoOwner_thenWebhookFlowCompletesButNoOnboardingMailIsSent() {
+        Tenant ownerlessExistingTenant = createOwnerlessExistingTenant("ownerless-tenant");
         String stripeSubscriptionId = "sub_e2e_ownerless_001";
 
         webhookInboxRepository.save(subscriptionCreatedWebhook(
                 "evt_e2e_sub_ownerless_001",
                 stripeSubscriptionId,
-                tenantWithoutOwner.getId(),
+                ownerlessExistingTenant.getId(),
                 "business",
                 Instant.now().getEpochSecond()
         ));
@@ -221,11 +221,11 @@ public class PurchaseFlowIntegrationTest extends BaseIntegrationTest {
         Subscription subscription = subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId)
                 .orElseThrow();
         assertThat(subscription.getStatus()).isEqualTo(Subscription.SubscriptionStatus.ACTIVE);
-        assertThat(subscription.getTenant().getId()).isEqualTo(tenantWithoutOwner.getId());
+        assertThat(subscription.getTenant().getId()).isEqualTo(ownerlessExistingTenant.getId());
 
-        assertThat(entitlementRepository.findByTenant(tenantWithoutOwner)).isNotEmpty();
-        assertThat(entitlementVersionRepository.findByTenant(tenantWithoutOwner)).isPresent();
-        assertThat(outboxEventRepository.findByAggregateTypeAndAggregateId("Tenant", tenantWithoutOwner.getId()))
+        assertThat(entitlementRepository.findByTenant(ownerlessExistingTenant)).isNotEmpty();
+        assertThat(entitlementVersionRepository.findByTenant(ownerlessExistingTenant)).isPresent();
+        assertThat(outboxEventRepository.findByAggregateTypeAndAggregateId("Tenant", ownerlessExistingTenant.getId()))
                 .anyMatch(event -> "EntitlementsChanged".equals(event.getEventType()));
 
         assertWebhookProcessed("evt_e2e_sub_ownerless_001");
@@ -252,7 +252,7 @@ public class PurchaseFlowIntegrationTest extends BaseIntegrationTest {
         return tenantRepository.save(tenant);
     }
 
-    private Tenant createTenantWithoutOwner(String tenantSlug) {
+    private Tenant createOwnerlessExistingTenant(String tenantSlug) {
         Tenant tenant = TenantTestBuilder.aTenant()
                 .withName("Tenant " + tenantSlug)
                 .withSlug(tenantSlug)
