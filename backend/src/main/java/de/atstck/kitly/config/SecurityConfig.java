@@ -57,6 +57,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans", "/api/webhooks/**", "/api/billing/webhooks/**", "/api/newsletter/**").permitAll()
+                        // Service-to-service: InternalEntitlementController checks its own service key
+                        .requestMatchers("/api/internal/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

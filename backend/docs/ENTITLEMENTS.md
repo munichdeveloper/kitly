@@ -234,3 +234,19 @@ All tests use Mockito for mocking dependencies and JUnit 5 for test execution.
 4. **Admin UI** - Build interface for managing tenant overrides
 5. **Audit Log** - Log all entitlement changes for compliance
 6. **Caching** - Add Redis cache layer for frequently accessed entitlements
+
+## Service-to-service lookup for connected apps
+
+`POST /api/internal/entitlements/lookup` lets a connected app (e.g. the Controla Premium backend)
+read the current plan of many tenants without a user token. Apps use it for background jobs and to
+notice cancellations without waiting for the next login.
+
+- Auth: header `X-Kitly-Service-Key`, one of the comma-separated keys in `KITLY_INTERNAL_SERVICE_KEYS`
+  (`kitly.internal.service-keys`). Keys shorter than 32 characters are ignored; without keys the
+  endpoint answers 404. User JWTs never grant access.
+- Request: `{"tenantIds": ["<uuid>", ...]}` (at most 500).
+- Response per tenant: `status` = `ACTIVE` (ACTIVE or TRIALING subscription with a plan),
+  `NO_SUBSCRIPTION` or `UNKNOWN_TENANT`, plus `planCode`, `subscriptionStatus`,
+  `entitlementVersion` and the merged `items` (same as `/api/tenants/{id}/entitlements`).
+- Unexpected errors fail the whole request (5xx) instead of being reported as "no subscription", so
+  callers keep their last known state on outages.
