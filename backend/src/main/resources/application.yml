@@ -55,6 +55,11 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3002}
 
+kitly:
+  internal:
+    # Comma-separated service keys (>= 32 chars) for /api/internal/**; empty disables the endpoints.
+    service-keys: ${KITLY_INTERNAL_SERVICE_KEYS:}
+
 app:
   frontend-url: ${FRONTEND_URL:http://localhost:3000} # NIM Frontend URL
   frontend-app-url: ${FRONTEND_APP_URL:http://localhost:3001} # NIM App Frontend URL
