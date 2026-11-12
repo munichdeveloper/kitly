@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +24,8 @@ public class EntitlementResponse {
     private Integer seatsQuantity;
     private Long activeSeats;
     private Long entitlementVersion;
+    /** End of the paid period (UTC) as last reported by Stripe; null if unknown. */
+    private Instant currentPeriodEnd;
     private List<EntitlementItem> items;
     
     @Data

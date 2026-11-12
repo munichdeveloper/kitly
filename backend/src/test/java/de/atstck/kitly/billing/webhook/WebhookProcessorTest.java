@@ -31,6 +31,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -196,6 +197,7 @@ class WebhookProcessorTest {
         subscriptionData.put("id", "sub_test_123");
         subscriptionData.put("status", "active");
         subscriptionData.put("created", Instant.now().getEpochSecond()); // added timestamp
+        subscriptionData.put("current_period_end", 1797069600L);
         subscriptionData.put("metadata", Map.of("tenant_id", testTenantId.toString()));
         subscriptionData.put("items", Map.of("data", List.of(
                 Map.of("price", Map.of("metadata", Map.of("plan", "business")))
@@ -236,6 +238,7 @@ class WebhookProcessorTest {
         Subscription savedSubscription = subscriptionCaptor.getValue();
         // Plan is now a PlanEntity, not an enum, so we verify it's not null
         assertTrue(savedSubscription.getPlan() != null);
+        assertEquals(java.time.LocalDateTime.of(2026, 12, 12, 10, 0), savedSubscription.getEndsAt());
 
         verify(entitlementService, times(1)).syncEntitlements(testTenantId);
         verify(outboxService, times(1))
@@ -513,5 +516,26 @@ class WebhookProcessorTest {
         Map<String, Object> data = (Map<String, Object>) payload.get("data");
         Map<String, Object> object = (Map<String, Object>) data.get("object");
         return (String) object.get(field);
+    }
+
+    @Test
+    void currentPeriodEndFromSubscription() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("current_period_end", 1797069600L);
+        assertEquals(java.time.LocalDateTime.of(2026, 12, 12, 10, 0), WebhookProcessor.currentPeriodEnd(data));
+    }
+
+    @Test
+    void currentPeriodEndFromLatestItemOnNewerApiVersions() {
+        Map<String, Object> data = new HashMap<>();
+        data.put("items", Map.of("data", List.of(
+                Map.of("current_period_end", 1797069600L),
+                Map.of("current_period_end", 1797073200L))));
+        assertEquals(java.time.LocalDateTime.of(2026, 12, 12, 11, 0), WebhookProcessor.currentPeriodEnd(data));
+    }
+
+    @Test
+    void currentPeriodEndMissing() {
+        assertNull(WebhookProcessor.currentPeriodEnd(Map.of("items", Map.of("data", List.of(Map.of("id", "si_1"))))));
     }
 }

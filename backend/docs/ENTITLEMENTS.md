@@ -68,6 +68,7 @@ Returns computed entitlements for a specific tenant.
   "seatsQuantity": 50,
   "activeSeats": 7,
   "entitlementVersion": 15,
+  "currentPeriodEnd": "2026-12-12T10:00:00Z",
   "items": [
     {
       "key": "features.ai_assistant",
@@ -82,6 +83,8 @@ Returns computed entitlements for a specific tenant.
   ]
 }
 ```
+
+`currentPeriodEnd` is the end of the paid Stripe period (UTC) from the last `customer.subscription.*` webhook, or `null` if Kitly has not seen one yet. It moves forward with every renewal. Connected apps can use it to stop paid background work for tenants that cancel and do not log in again.
 
 ### GET /api/entitlements/me
 Returns entitlements for the current tenant (from TenantContext).

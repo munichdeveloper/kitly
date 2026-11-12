@@ -96,6 +96,8 @@ public class EntitlementService {
                 .seatsQuantity(subscription.getMaxSeats())
                 .activeSeats(activeSeats)
                 .entitlementVersion(version.getVersion())
+                .currentPeriodEnd(subscription.getEndsAt() == null ? null
+                        : subscription.getEndsAt().toInstant(java.time.ZoneOffset.UTC))
                 .items(new ArrayList<>(mergedEntitlements.values()))
                 .build();
     }

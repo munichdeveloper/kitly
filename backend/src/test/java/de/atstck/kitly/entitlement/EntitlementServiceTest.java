@@ -68,6 +68,7 @@ class EntitlementServiceTest {
                 .plan(mockPlan)
                 .status(Subscription.SubscriptionStatus.ACTIVE)
                 .maxSeats(50)
+                .endsAt(java.time.LocalDateTime.of(2026, 12, 12, 10, 0))
                 .build();
     }
     
@@ -110,6 +111,7 @@ class EntitlementServiceTest {
         assertEquals(50, response.getSeatsQuantity());
         assertEquals(7L, response.getActiveSeats());
         assertEquals(15L, response.getEntitlementVersion());
+        assertEquals(java.time.Instant.parse("2026-12-12T10:00:00Z"), response.getCurrentPeriodEnd());
         
         // Check plan entitlements
         List<EntitlementResponse.EntitlementItem> items = response.getItems();

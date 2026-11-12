@@ -294,6 +294,10 @@ public class WebhookProcessor {
         subscription.setStripeSubscriptionId(stripeSubscriptionId);
         subscription.setStatus(mapStripeStatus(status));
         subscription.setLastStripeEventAt(eventTime);
+        LocalDateTime periodEnd = currentPeriodEnd(subscriptionData);
+        if (periodEnd != null) {
+            subscription.setEndsAt(periodEnd);
+        }
 
         log.info("Persisting subscription update for Tenant {}: StripeID={}, Status={}, EventTime={}",
                 tenantId, stripeSubscriptionId, status, eventTime);
@@ -355,6 +359,9 @@ public class WebhookProcessor {
                 // Re-apply updates to the found instance
                 subscription.setStripeSubscriptionId(stripeSubscriptionId);
                 subscription.setStatus(mapStripeStatus(status));
+                if (periodEnd != null) {
+                    subscription.setEndsAt(periodEnd);
+                }
                 // Plan update logic would need to run again or we trust the previous logic was same.
                 // Simpler to just re-save this one.
                 subscriptionRepository.save(subscription);
@@ -387,6 +394,32 @@ public class WebhookProcessor {
         outboxService.publish("EntitlementsChanged", "Tenant", tenantId, eventPayload);
 
         log.info("Updated subscription for tenant: {}", tenantId);
+    }
+
+    /**
+     * End of the paid period in UTC. Stripe API versions before 2025-03-31 carry
+     * {@code current_period_end} on the subscription, later ones on each item; the
+     * latest item end is used then. Returns null when the payload has neither.
+     */
+    @SuppressWarnings("unchecked")
+    static LocalDateTime currentPeriodEnd(Map<String, Object> subscriptionData) {
+        Long epoch = epochSeconds(subscriptionData.get("current_period_end"));
+        if (epoch == null && subscriptionData.get("items") instanceof Map<?, ?> items
+                && items.get("data") instanceof List<?> dataItems) {
+            for (Object item : dataItems) {
+                if (item instanceof Map<?, ?> itemMap) {
+                    Long itemEnd = epochSeconds(itemMap.get("current_period_end"));
+                    if (itemEnd != null && (epoch == null || itemEnd > epoch)) {
+                        epoch = itemEnd;
+                    }
+                }
+            }
+        }
+        return epoch == null ? null : LocalDateTime.ofEpochSecond(epoch, 0, ZoneOffset.UTC);
+    }
+
+    private static Long epochSeconds(Object value) {
+        return value instanceof Number number ? number.longValue() : null;
     }
 
     private void handleSubscriptionDeleted(WebhookInbox webhook) {

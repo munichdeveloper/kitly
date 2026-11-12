@@ -437,6 +437,7 @@ Get computed entitlements for a tenant.
   "seatsQuantity": 50,
   "activeSeats": 7,
   "entitlementVersion": 15,
+  "currentPeriodEnd": "2026-12-12T10:00:00Z",
   "items": [
     {
       "key": "features.ai_assistant",
