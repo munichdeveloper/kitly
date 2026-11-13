@@ -37,6 +37,8 @@ services:
       - EMAIL_PROVIDER=${EMAIL_PROVIDER:-KITLY_MAIL}
       - KITLY_MAIL_API_KEY=${KITLY_MAIL_API_KEY:-change-this-default-api-key}
       - KITLY_MAIL_URL=${KITLY_MAIL_URL:-http://kitly-mail/api/emails}
+      # Service-Keys für /api/internal/entitlements/lookup (z. B. Controla Premium), kommagetrennt, je mind. 32 Zeichen
+      - KITLY_INTERNAL_SERVICE_KEYS=${KITLY_INTERNAL_SERVICE_KEYS:-}
     networks:
       - auto-proxy
       - kitly-network
