@@ -235,6 +235,32 @@ public class PurchaseFlowIntegrationTest extends BaseIntegrationTest {
         verify(mailSenderProvider, never()).sendHtmlMail(anyString(), anyString(), anyString(), anyString());
     }
 
+    @Test
+    void whenWebhookLivemodeDoesNotMatchStripeMode_thenNoSubscriptionIsCreated() {
+        // Given: stripe.mode=test (seeded) and a live-mode subscription event in the inbox
+        Tenant tenant = createTenantWithOwner("owner-live", "owner-live@example.com", "owner-live-tenant", "Owner");
+        String stripeSubscriptionId = "sub_e2e_livemode_001";
+        WebhookInbox liveEvent = subscriptionCreatedWebhook(
+                "evt_e2e_livemode_001",
+                stripeSubscriptionId,
+                tenant.getId(),
+                "business",
+                Instant.now().getEpochSecond());
+        Map<String, Object> livePayload = new java.util.HashMap<>(liveEvent.getPayload());
+        livePayload.put("livemode", true);
+        liveEvent.setPayload(livePayload);
+        webhookInboxRepository.save(liveEvent);
+
+        // When
+        webhookProcessor.processPendingWebhooks();
+
+        // Then: no subscription state was created and the event is parked as FAILED
+        assertThat(subscriptionRepository.findFirstByStripeSubscriptionId(stripeSubscriptionId)).isEmpty();
+        WebhookInbox stored = webhookInboxRepository.findByProviderAndEventId("stripe", "evt_e2e_livemode_001").orElseThrow();
+        assertThat(stored.getStatus()).isEqualTo(WebhookInbox.WebhookStatus.FAILED);
+        assertThat(stored.getErrorMessage()).contains("livemode");
+    }
+
     private Tenant createTenantWithOwner(String username, String email, String tenantSlug, String firstName) {
         User owner = UserTestBuilder.aUser()
                 .withUsername(username)

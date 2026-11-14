@@ -25,6 +25,11 @@ spring:
       hibernate:
         format_sql: false
 
+# Never call the real Stripe API from tests on startup (see StripeConsistencyService).
+stripe:
+  consistency-check:
+    on-startup: false
+
 jwt:
   secret: test-secret-key-for-jwt-token-signing
   expiration: 86400000

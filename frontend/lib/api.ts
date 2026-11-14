@@ -24,6 +24,8 @@ import {
   ApplicationSettingResponse,
   ApplicationSettingRequest,
   StripePlanResponse,
+  StripeConsistencyReport,
+  StripeMode,
   PlanPriceStatusResponse,
   PlanActivationRequest,
 } from './types';
@@ -467,6 +469,27 @@ export class ApiClient {
       headers: this.getAuthHeader(),
     });
     return this.handleResponse<{ message: string; mode: string; configuredPlans: string[]; planCount: number }>(response);
+  }
+
+  static async getStripeConsistency(): Promise<StripeConsistencyReport> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/consistency`, {
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<StripeConsistencyReport>(response);
+  }
+
+  static async runStripeConsistencyCheck(): Promise<StripeConsistencyReport> {
+    const response = await fetch(`${API_BASE_URL}/platform/settings/stripe/consistency/check`, {
+      method: 'POST',
+      headers: this.getAuthHeader(),
+    });
+    return this.handleResponse<StripeConsistencyReport>(response);
+  }
+
+  /** Public: the active Stripe mode as configured in the backend (no auth required, nothing secret). */
+  static async getPublicStripeMode(): Promise<{ mode: StripeMode }> {
+    const response = await fetch(`${API_BASE_URL}/billing/stripe-mode`);
+    return this.handleResponse<{ mode: StripeMode }>(response);
   }
 
   static async getStripePlanPrices(): Promise<PlanPriceStatusResponse[]> {

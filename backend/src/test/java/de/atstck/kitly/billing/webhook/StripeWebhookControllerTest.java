@@ -38,7 +38,10 @@ class StripeWebhookControllerTest {
     
     @BeforeEach
     void setUp() {
-        when(stripeConfig.getWebhookSecret()).thenReturn(TEST_SECRET);
+        // lenient: the controller reads the secret and mode per request (they follow a stripe.mode switch),
+        // and some tests here never call it.
+        lenient().when(stripeConfig.getWebhookSecret()).thenReturn(TEST_SECRET);
+        lenient().when(stripeConfig.getCurrentMode()).thenReturn("test");
         controller = new StripeWebhookController(webhookInboxRepository, stripeConfig, new ObjectMapper());
     }
     
@@ -197,6 +200,78 @@ class StripeWebhookControllerTest {
         // Then: Signature verification succeeds and the event is accepted
         assertEquals(HttpStatus.OK, response.getStatusCode(), "Event type " + eventType + " should be accepted");
         assertEquals("received", response.getBody().get("status"));
+    }
+
+    @Test
+    void testLiveEventInTestMode_IsIgnoredWith200AndNotStored() {
+        // Given: a validly signed live-mode event while stripe.mode=test
+        String payload = StripeWebhookFixtures.payloadFor("customer.subscription.created", "evt_live_in_test", true);
+        String signature = StripeWebhookFixtures.signedHeader(payload, TEST_SECRET);
+
+        // When
+        ResponseEntity<Map<String, Object>> response = controller.handleStripeWebhook(payload, signature);
+
+        // Then: acknowledged (so Stripe does not retry forever) but never stored/processed
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("ignored", response.getBody().get("status"));
+        assertEquals("livemode_mismatch", response.getBody().get("reason"));
+        verify(webhookInboxRepository, never()).save(any());
+        verify(webhookInboxRepository, never()).findByProviderAndEventId(any(), any());
+    }
+
+    @Test
+    void testTestEventInLiveMode_IsIgnoredAndNotStored() {
+        when(stripeConfig.getCurrentMode()).thenReturn("live");
+        String payload = StripeWebhookFixtures.payloadFor("checkout.session.completed", "evt_test_in_live", false);
+        String signature = StripeWebhookFixtures.signedHeader(payload, TEST_SECRET);
+
+        ResponseEntity<Map<String, Object>> response = controller.handleStripeWebhook(payload, signature);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("ignored", response.getBody().get("status"));
+        verify(webhookInboxRepository, never()).save(any());
+    }
+
+    @Test
+    void testLiveEventInLiveMode_IsStored() {
+        when(stripeConfig.getCurrentMode()).thenReturn("live");
+        String payload = StripeWebhookFixtures.payloadFor("checkout.session.completed", "evt_live_in_live", true);
+        String signature = StripeWebhookFixtures.signedHeader(payload, TEST_SECRET);
+        when(webhookInboxRepository.findByProviderAndEventId("stripe", "evt_live_in_live")).thenReturn(Optional.empty());
+        when(webhookInboxRepository.save(any(WebhookInbox.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ResponseEntity<Map<String, Object>> response = controller.handleStripeWebhook(payload, signature);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("received", response.getBody().get("status"));
+        verify(webhookInboxRepository, times(1)).save(any(WebhookInbox.class));
+    }
+
+    @Test
+    void testEventWithoutLivemode_IsIgnored() {
+        String payload = StripeWebhookFixtures.payloadFor("checkout.session.completed", "evt_no_livemode", null);
+        String signature = StripeWebhookFixtures.signedHeader(payload, TEST_SECRET);
+
+        ResponseEntity<Map<String, Object>> response = controller.handleStripeWebhook(payload, signature);
+
+        assertEquals("ignored", response.getBody().get("status"));
+        verify(webhookInboxRepository, never()).save(any());
+    }
+
+    @Test
+    void testWebhookSecretFollowsModeSwitchAtRuntime() {
+        // Given: the controller was created while the test secret was active; then the mode switched to live
+        when(stripeConfig.getCurrentMode()).thenReturn("live");
+        when(stripeConfig.getWebhookSecret()).thenReturn("whsec_live_secret");
+        String payload = StripeWebhookFixtures.payloadFor("checkout.session.completed", "evt_after_switch", true);
+        when(webhookInboxRepository.findByProviderAndEventId("stripe", "evt_after_switch")).thenReturn(Optional.empty());
+        when(webhookInboxRepository.save(any(WebhookInbox.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Then: an event signed with the old test secret is rejected, one signed with the live secret accepted
+        assertEquals(HttpStatus.BAD_REQUEST, controller.handleStripeWebhook(payload,
+                StripeWebhookFixtures.signedHeader(payload, TEST_SECRET)).getStatusCode());
+        assertEquals("received", controller.handleStripeWebhook(payload,
+                StripeWebhookFixtures.signedHeader(payload, "whsec_live_secret")).getBody().get("status"));
     }
 
     static Set<String> supportedEventTypes() {

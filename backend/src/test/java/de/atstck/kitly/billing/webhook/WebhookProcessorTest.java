@@ -2,6 +2,7 @@ package de.atstck.kitly.billing.webhook;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.atstck.kitly.common.outbox.OutboxService;
+import de.atstck.kitly.config.StripeConfig;
 import de.atstck.kitly.entitlement.EntitlementService;
 import de.atstck.kitly.entity.Invoice;
 import de.atstck.kitly.entity.PlanEntity;
@@ -63,6 +64,9 @@ class WebhookProcessorTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private StripeConfig stripeConfig;
+
     @InjectMocks
     private WebhookProcessor webhookProcessor;
 
@@ -86,6 +90,8 @@ class WebhookProcessorTest {
                 .code("starter")
                 .name("Starter Plan")
                 .build();
+
+        lenient().when(stripeConfig.getCurrentMode()).thenReturn("test");
 
         // Mock TransactionTemplate to execute the action immediately
         lenient().doAnswer(invocation -> {
@@ -276,6 +282,56 @@ class WebhookProcessorTest {
     // invoice.payment_succeeded, invoice.payment_failed, invoice.finalized.
     // Payloads are generated via StripeWebhookFixtures so they match exactly what
     // StripeWebhookControllerTest sends through the real controller. ---
+
+    @Test
+    void testLivemodeMismatch_DoesNotChangeSubscriptionState() {
+        // Given: a stored live-mode subscription event while stripe.mode=test (e.g. stored before the
+        // controller guard existed or before a mode switch)
+        Map<String, Object> payload = parsePayload(
+                StripeWebhookFixtures.payloadFor("customer.subscription.created", "evt_live_sub", true));
+        WebhookInbox webhook = WebhookInbox.builder()
+                .id(UUID.randomUUID())
+                .provider("stripe")
+                .eventId("evt_live_sub")
+                .eventType("customer.subscription.created")
+                .payload(payload)
+                .status(WebhookInbox.WebhookStatus.PENDING)
+                .retryCount(0)
+                .build();
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
+                .thenReturn(List.of(webhook));
+
+        // When
+        webhookProcessor.processPendingWebhooks();
+
+        // Then: nothing about subscriptions/entitlements is touched and the event is parked as FAILED
+        verifyNoInteractions(subscriptionRepository, tenantRepository, entitlementService, outboxService, emailService);
+        assertEquals(WebhookInbox.WebhookStatus.FAILED, webhook.getStatus());
+        assertTrue(webhook.getErrorMessage().contains("livemode"));
+    }
+
+    @Test
+    void testLivemodeMatchingLiveMode_IsProcessed() {
+        // Given: stripe.mode=live and a live event of a type that needs no further lookups
+        when(stripeConfig.getCurrentMode()).thenReturn("live");
+        Map<String, Object> payload = parsePayload(
+                StripeWebhookFixtures.payloadFor("customer.created", "evt_live_customer", true));
+        WebhookInbox webhook = WebhookInbox.builder()
+                .id(UUID.randomUUID())
+                .provider("stripe")
+                .eventId("evt_live_customer")
+                .eventType("customer.created")
+                .payload(payload)
+                .status(WebhookInbox.WebhookStatus.PENDING)
+                .retryCount(0)
+                .build();
+        when(webhookInboxRepository.findByProviderAndStatusOrderByCreatedAtAsc("stripe", WebhookInbox.WebhookStatus.PENDING))
+                .thenReturn(List.of(webhook));
+
+        webhookProcessor.processPendingWebhooks();
+
+        assertEquals(WebhookInbox.WebhookStatus.PROCESSED, webhook.getStatus());
+    }
 
     @Test
     void testProcessCheckoutSessionCompleted_SendsOnboardingEmail() {

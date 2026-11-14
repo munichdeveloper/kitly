@@ -45,6 +45,11 @@ spring:
 server:
   port: 8080
 
+stripe:
+  consistency-check:
+    # Verify Stripe test/live consistency (keys, webhook secret, price IDs) in the background after startup.
+    on-startup: ${STRIPE_CONSISTENCY_CHECK_ON_STARTUP:true}
+
 jwt:
   secret: kitly-secret-key-for-jwt-token-signing-please-change-in-production
   expiration: 86400000 # 24 hours in milliseconds

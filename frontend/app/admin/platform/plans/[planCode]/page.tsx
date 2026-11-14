@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
+import type { StripeMode } from '@/lib/types';
 import { useToast } from '@/lib/toast-context';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
@@ -41,11 +42,14 @@ interface PlanEntitlement {
 
 type TabType = 'details' | 'entitlements';
 
+const STRIPE_MODES: StripeMode[] = ['test', 'live'];
+
 export default function PlanDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { showToast } = useToast();
   const planCode = params?.planCode as string;
+  const stripePriceKey = (mode: StripeMode) => `stripe.${mode}.plan.${planCode}`;
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [planEntitlements, setPlanEntitlements] = useState<Record<string, string>>({});
@@ -60,7 +64,10 @@ export default function PlanDetailPage() {
     isActive: true,
     displayOrder: 0,
   });
-  const [stripePriceId, setStripePriceId] = useState('');
+  // Price IDs are stored per Stripe mode: stripe.<mode>.plan.<PLAN> (#49)
+  const [stripePriceIds, setStripePriceIds] = useState<Record<StripeMode, string>>({ test: '', live: '' });
+  const [savedStripePriceIds, setSavedStripePriceIds] = useState<Record<StripeMode, string>>({ test: '', live: '' });
+  const [activeStripeMode, setActiveStripeMode] = useState<StripeMode | null>(null);
 
 
   const [showAddEntitlementModal, setShowAddEntitlementModal] = useState(false);
@@ -99,13 +106,19 @@ export default function PlanDetailPage() {
         displayOrder: planData.displayOrder || 0,
       });
 
-      // Load Stripe Price ID
-      try {
-        const priceIdSetting = await ApiClient.getPlatformSetting(`stripe.plan.${planCode}`);
-        setStripePriceId(priceIdSetting.value);
-      } catch (e) {
-        setStripePriceId('');
-      }
+      // Load Stripe Price IDs for both modes and the active mode
+      const loadPriceId = (mode: StripeMode) =>
+        ApiClient.getPlatformSetting(stripePriceKey(mode))
+          .then((setting) => setting.value || '')
+          .catch(() => '');
+      const [testPriceId, livePriceId, modeData] = await Promise.all([
+        loadPriceId('test'),
+        loadPriceId('live'),
+        ApiClient.getCurrentStripeMode().catch(() => null),
+      ]);
+      setStripePriceIds({ test: testPriceId, live: livePriceId });
+      setSavedStripePriceIds({ test: testPriceId, live: livePriceId });
+      setActiveStripeMode(modeData?.mode === 'live' ? 'live' : modeData?.mode === 'test' ? 'test' : null);
 
     } catch (err: any) {
       console.error('Error loading plan:', err);
@@ -124,28 +137,29 @@ export default function PlanDetailPage() {
       setSaving(true);
       await ApiClient.put(`/admin/plans/${plan.id}`, formData);
 
-      // Save Stripe Price ID
-      try {
-        const key = `stripe.plan.${planCode}`;
-        if (stripePriceId) {
-          await ApiClient.createPlatformSetting({
-            key,
-            value: stripePriceId,
-            type: 'STRING',
-            description: `Stripe Price ID for plan ${planCode}`,
-            isPublic: false
-          });
-        } else {
-           // If empty, we might want to delete it, but createPlatformSetting with empty value is also fine or we can delete
-           try {
-             await ApiClient.deletePlatformSetting(key);
-           } catch (e) {
-             // ignore if not found
-           }
+      // Save Stripe Price IDs per mode (only the ones that changed)
+      for (const mode of STRIPE_MODES) {
+        const value = stripePriceIds[mode].trim();
+        if (value === savedStripePriceIds[mode]) {
+          continue;
         }
-      } catch (e) {
-        console.error('Error saving stripe price id', e);
-        showToast('Failed to save Stripe Price ID', 'error');
+        const key = stripePriceKey(mode);
+        try {
+          if (value) {
+            await ApiClient.createPlatformSetting({
+              key,
+              value,
+              type: 'STRING',
+              description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Mode Price ID for plan ${planCode}`,
+              isPublic: false
+            });
+          } else {
+            await ApiClient.deletePlatformSetting(key);
+          }
+        } catch (e) {
+          console.error(`Error saving ${mode} stripe price id`, e);
+          showToast(`Failed to save Stripe ${mode} Price ID`, 'error');
+        }
       }
 
       showToast('Plan updated successfully', 'success');
@@ -331,21 +345,28 @@ export default function PlanDetailPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Stripe Price ID
-                </label>
-                <input
-                  type="text"
-                  value={stripePriceId}
-                  onChange={(e) => setStripePriceId(e.target.value)}
-                  placeholder="price_..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono"
-                />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  The Stripe Price ID for this plan in the current mode.
-                </p>
-              </div>
+              {STRIPE_MODES.map((mode) => (
+                <div key={mode}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Stripe Price ID ({mode === 'test' ? 'Test' : 'Live'} mode)
+                    {activeStripeMode === mode && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                        active
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={stripePriceIds[mode]}
+                    onChange={(e) => setStripePriceIds({ ...stripePriceIds, [mode]: e.target.value })}
+                    placeholder="price_..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white font-mono"
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Stored as <code className="font-mono">{stripePriceKey(mode)}</code>. Must be a {mode}-mode price from the Stripe dashboard.
+                  </p>
+                </div>
+              ))}
 
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/30">
                 <div className="flex items-center gap-3">

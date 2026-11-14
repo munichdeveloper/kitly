@@ -204,7 +204,7 @@ export default function PlansManagementPage() {
               </p>
               <ol className="list-decimal list-inside space-y-1 text-orange-800 dark:text-orange-200 mt-1 ml-2">
                 <li>Gehen Sie zu Platform Settings</li>
-                <li>Suchen Sie nach Settings mit dem Prefix "stripe.plan."</li>
+                <li>Suchen Sie nach Settings mit dem Prefix &quot;stripe.test.plan.&quot; bzw. &quot;stripe.live.plan.&quot; (je nach Stripe-Modus)</li>
                 <li>Ersetzen Sie ungültige Werte durch echte Stripe Price IDs aus Ihrem Stripe Dashboard</li>
                 <li>Oder löschen Sie die ungültigen Settings</li>
               </ol>
@@ -345,10 +345,15 @@ export default function PlansManagementPage() {
                       <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded p-3">
                         <p>Keine Stripe-Preis-Konfiguration gefunden</p>
                         <p className="text-xs mt-1">
-                          Konfigurieren Sie einen Preis in Platform Settings mit dem Key:
+                          Konfigurieren Sie die Price IDs pro Modus auf der Plan-Seite (Keys:
                           <code className="ml-1 px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
-                            stripe.plan.{plan.code}
+                            stripe.test.plan.{plan.code}
                           </code>
+                          {' / '}
+                          <code className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
+                            stripe.live.plan.{plan.code}
+                          </code>
+                          )
                         </p>
                       </div>
                     )}
@@ -378,7 +383,7 @@ export default function PlansManagementPage() {
               <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
                 <li>Plan status (Active/Inactive) controls visibility to customers</li>
                 <li>Stripe prices are fetched and validated automatically</li>
-                <li>Configure Stripe Price IDs in Platform Settings with key: <code className="px-1 bg-blue-100 dark:bg-blue-900 rounded">stripe.plan.PLAN_CODE</code></li>
+                <li>Configure Stripe Price IDs per mode on the plan page (keys: <code className="px-1 bg-blue-100 dark:bg-blue-900 rounded">stripe.test.plan.PLAN_CODE</code> / <code className="px-1 bg-blue-100 dark:bg-blue-900 rounded">stripe.live.plan.PLAN_CODE</code>); only the active mode is used</li>
                 <li>Only plans with valid, active Stripe prices can be offered to customers</li>
                 <li>Click "Configure" to manage entitlements for each plan</li>
               </ul>

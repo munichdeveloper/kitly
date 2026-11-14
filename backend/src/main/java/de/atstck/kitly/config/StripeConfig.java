@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @Configuration
@@ -17,6 +18,12 @@ import java.util.Map;
 @Setter
 @Slf4j
 public class StripeConfig {
+
+    public static final String MODE_KEY = "stripe.mode";
+    public static final String MODE_TEST = "test";
+    public static final String MODE_LIVE = "live";
+    /** Legacy, mode-independent price ID prefix (before #49). Kept in the DB, no longer read. */
+    public static final String LEGACY_PLAN_PRICE_PREFIX = "stripe.plan.";
 
     private String apiKey;
     private String webhookSecret;
@@ -38,22 +45,17 @@ public class StripeConfig {
 
         if (platformSettingService != null) {
             try {
-                String mode = platformSettingService.getSettingValue("stripe.mode", "test");
+                String mode = normalizeMode(platformSettingService.getSettingValue(MODE_KEY, MODE_TEST));
                 log.info("Initializing Stripe with mode: {}", mode);
 
-                String modeApiKey = platformSettingService.getSettingValue("stripe." + mode + ".api_key", null);
-                String modeWebhookSecret = platformSettingService.getSettingValue("stripe." + mode + ".webhook_secret", null);
+                // Credentials are strictly per mode: if the active mode has no key/secret, we must not
+                // keep using the values of the previously active mode (e.g. a test key after switching to live).
+                this.apiKey = blankToNull(platformSettingService.getSettingValue(apiKeySettingKey(mode), null));
+                this.webhookSecret = blankToNull(platformSettingService.getSettingValue(webhookSecretSettingKey(mode), null));
 
-                if (modeApiKey != null && !modeApiKey.isEmpty()) {
-                    this.apiKey = modeApiKey;
-                }
-                if (modeWebhookSecret != null && !modeWebhookSecret.isEmpty()) {
-                    this.webhookSecret = modeWebhookSecret;
-                }
-
-                // Load dynamic plan prices
+                // Load dynamic plan prices for the active mode
                 // Format: stripe.{mode}.plan.{PLAN_NAME} = price_id
-                loadDynamicPlanPrices();
+                loadDynamicPlanPrices(mode);
 
             } catch (Exception e) {
                 log.warn("Could not load platform settings, using default configuration", e);
@@ -66,18 +68,20 @@ public class StripeConfig {
     }
 
     /**
-     * Load dynamic plan prices from platform settings
-     * Format: stripe.plan.{PLAN_NAME} = price_id
+     * Load dynamic plan prices for the given mode from platform settings.
+     * Format: stripe.{mode}.plan.{PLAN_NAME} = price_id
+     * <p>
+     * The legacy, mode-independent keys {@code stripe.plan.{PLAN_NAME}} are intentionally NOT read
+     * anymore: falling back to them after a switch to live mode would silently reuse test price IDs.
+     * Migration V30 copied the legacy values to {@code stripe.test.plan.*}.
      */
-    private void loadDynamicPlanPrices() {
+    private void loadDynamicPlanPrices(String mode) {
         if (platformSettingService == null) {
             return;
         }
 
         try {
-            // Get all settings that match the pattern stripe.plan.*
-            // Key format: stripe.plan.{PLAN_NAME}
-            String prefix = "stripe.plan.";
+            String prefix = planPricePrefix(mode);
 
             Map<String, String> settings = platformSettingService.getSettingsValuesByPrefix(prefix);
 
@@ -90,7 +94,7 @@ public class StripeConfig {
                     continue;
                 }
 
-                // Extract plan name from key: stripe.plan.{PLAN_NAME}
+                // Extract plan name from key: stripe.{mode}.plan.{PLAN_NAME}
                 if (key.length() > prefix.length()) {
                     String planName = key.substring(prefix.length());
                     if (priceId != null && priceId.startsWith("price_")) {
@@ -104,6 +108,34 @@ public class StripeConfig {
         } catch (Exception e) {
             log.warn("Error loading dynamic plan prices", e);
         }
+    }
+
+    /** Settings key prefix of the plan price IDs for the given mode, e.g. {@code stripe.live.plan.}. */
+    public static String planPricePrefix(String mode) {
+        return "stripe." + mode + ".plan.";
+    }
+
+    public static String apiKeySettingKey(String mode) {
+        return "stripe." + mode + ".api_key";
+    }
+
+    public static String webhookSecretSettingKey(String mode) {
+        return "stripe." + mode + ".webhook_secret";
+    }
+
+    /**
+     * Normalizes a raw {@code stripe.mode} value (trim, lower case, blank -> test). Unknown values are
+     * returned as-is so the consistency check can report them instead of silently picking a mode.
+     */
+    public static String normalizeMode(String rawMode) {
+        if (rawMode == null || rawMode.isBlank()) {
+            return MODE_TEST;
+        }
+        return rawMode.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     /**
@@ -145,9 +177,14 @@ public class StripeConfig {
 
     public String getCurrentMode() {
         if (platformSettingService != null) {
-            return platformSettingService.getSettingValue("stripe.mode", "test");
+            return normalizeMode(platformSettingService.getSettingValue(MODE_KEY, MODE_TEST));
         }
-        return "test";
+        return MODE_TEST;
+    }
+
+    /** True when the active mode is {@code live}, i.e. Stripe objects must have {@code livemode=true}. */
+    public boolean isLiveMode() {
+        return MODE_LIVE.equals(getCurrentMode());
     }
 
 }

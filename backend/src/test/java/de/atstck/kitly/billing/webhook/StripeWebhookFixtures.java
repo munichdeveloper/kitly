@@ -42,10 +42,22 @@ public final class StripeWebhookFixtures {
     }
 
     public static String payloadFor(String eventType, String eventId) {
+        return payloadFor(eventType, eventId, false);
+    }
+
+    /**
+     * Like {@link #payloadFor(String, String)} but with an explicit {@code livemode} flag (real Stripe
+     * events always carry it; the fixtures default to test mode, matching the seeded stripe.mode=test).
+     * Pass {@code null} to omit the flag entirely.
+     */
+    public static String payloadFor(String eventType, String eventId, Boolean livemode) {
         Map<String, Object> event = new LinkedHashMap<>();
         event.put("id", eventId);
         event.put("object", "event");
         event.put("type", eventType);
+        if (livemode != null) {
+            event.put("livemode", livemode);
+        }
         event.put("created", Instant.now().getEpochSecond());
         event.put("data", Map.of("object", dataObjectFor(eventType)));
 
