@@ -56,7 +56,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans", "/api/webhooks/**", "/api/billing/webhooks/**", "/api/newsletter/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/api/invites/accept", "/api/plans", "/api/webhooks/**", "/api/billing/webhooks/**", "/api/billing/stripe-mode", "/api/newsletter/**").permitAll()
                         // Service-to-service: InternalEntitlementController checks its own service key
                         .requestMatchers("/api/internal/**").permitAll()
                         .anyRequest().authenticated()

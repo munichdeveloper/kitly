@@ -241,18 +241,17 @@ The checkout flow can be tested end to end with Stripe test mode. Stripe mode is
 Required backend setup:
 - Set backend platform setting `stripe.mode` to `test`.
 - Configure `stripe.test.api_key` and `stripe.test.webhook_secret`.
-- Configure test price IDs as `stripe.plan.{PLAN_CODE}` for the plans used in the test.
+- Configure test price IDs as `stripe.test.plan.{PLAN_CODE}` for the plans used in the test (live price IDs go to `stripe.live.plan.{PLAN_CODE}`; only the active mode is used).
 - Run `stripe listen --forward-to localhost:8080/api/billing/webhooks/stripe`.
+- Check the "Stripe Consistency" status in the platform admin: checkout only works while it is green (see `backend/docs/STRIPE_TEST_MODE.md`).
 
-Optional frontend QA signal:
-- Start the frontend with `NEXT_PUBLIC_STRIPE_TEST_MODE=true` to show a visible test-checkout indicator on `/checkout`.
-- This flag is UI-only. If the backend is in `live` mode, checkout still uses live Stripe.
-- If the backend is in `test` mode, checkout uses Stripe test mode even without this frontend flag.
+Test-mode banner:
+- `/checkout` shows a "Stripe test mode" banner exactly when the backend reports `stripe.mode = test` (`GET /api/billing/stripe-mode`). There is no frontend build flag for it.
 
 Recommended E2E flow:
 - Sign up a fresh user and create a workspace.
 - Open `/plans`, select a plan, and continue on `/checkout`.
-- If `NEXT_PUBLIC_STRIPE_TEST_MODE=true` is set, verify the test-checkout indicator is visible.
+- Verify the "Stripe test mode" banner is visible.
 - Pay in Stripe with test card `4242 4242 4242 4242`.
 - Land on `/confirm`, wait for the webhook, then verify the workspace billing page shows the updated subscription.
 

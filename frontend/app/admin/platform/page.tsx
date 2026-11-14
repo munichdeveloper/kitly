@@ -10,7 +10,7 @@ import Button from '@/components/Button';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ErrorMessage from '@/components/ErrorMessage';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { ApplicationSettingResponse } from '@/lib/types';
+import { ApplicationSettingResponse, StripeConsistencyReport } from '@/lib/types';
 
 type PlatformSetting = ApplicationSettingResponse;
 
@@ -23,6 +23,8 @@ export default function PlatformAdminPage() {
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [consistency, setConsistency] = useState<StripeConsistencyReport | null>(null);
+  const [checkingConsistency, setCheckingConsistency] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingSettings, setEditingSettings] = useState<Record<string, string>>({});
   const [settingsMode, setSettingsMode] = useState<'test' | 'live'>('test');
@@ -111,7 +113,8 @@ export default function PlatformAdminPage() {
     if (newMode === 'live') {
       const liveApiKey = settings.find(s => s.key === 'stripe.live.api_key');
       const liveWebhookSecret = settings.find(s => s.key === 'stripe.live.webhook_secret');
-      const plans = settings.filter(s => s.key.startsWith('stripe.plan.') && s.value);
+      // Price IDs are stored per mode (stripe.<mode>.plan.<PLAN>); live mode needs its own live price IDs.
+      const plans = settings.filter(s => s.key.startsWith('stripe.live.plan.') && s.value);
 
       if (!liveApiKey || !liveApiKey.value) {
         showToast('Live Mode API Key is not configured. Please configure it first in the plan settings.', 'error');
@@ -126,7 +129,7 @@ export default function PlatformAdminPage() {
       }
 
       if (plans.length === 0) {
-        showToast('At least one plan must be configured. Please add a plan first.', 'error');
+        showToast('At least one live price ID must be configured (stripe.live.plan.<PLAN>). Enter the live price IDs on the plan pages first.', 'error');
         setValidationErrors({ livePlans: true });
         return;
       }
@@ -154,6 +157,20 @@ export default function PlatformAdminPage() {
         }
       },
     });
+  };
+
+  const handleRunConsistencyCheck = async () => {
+    try {
+      setCheckingConsistency(true);
+      const report = await ApiClient.runStripeConsistencyCheck();
+      setConsistency(report);
+      showToast(`Stripe consistency check: ${report.status}`, report.status === 'GREEN' ? 'success' : 'error');
+    } catch (err) {
+      console.error('Error running Stripe consistency check:', err);
+      showToast(err instanceof Error && err.message ? err.message : 'Failed to run Stripe consistency check', 'error');
+    } finally {
+      setCheckingConsistency(false);
+    }
   };
 
   const handleRefreshStripeConfig = async () => {
@@ -236,13 +253,13 @@ export default function PlatformAdminPage() {
       }
 
       const mode = settingsMode;
-      const planKey = `stripe.plan.${newPlan.name.toUpperCase()}`;
+      const planKey = `stripe.${mode}.plan.${newPlan.name.toUpperCase()}`;
 
       await ApiClient.createPlatformSetting({
         key: planKey,
         value: newPlan.priceId,
         type: 'STRING',
-        description: `Stripe Price ID for ${newPlan.name.toUpperCase()} plan`,
+        description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
       });
 
       showToast('Plan added successfully', 'success');
@@ -346,7 +363,7 @@ export default function PlatformAdminPage() {
 
       // 3. Check for New Plan
       if (newPlan.name && newPlan.priceId) {
-        const planKey = `stripe.plan.${newPlan.name.toUpperCase()}`;
+        const planKey = `stripe.${mode}.plan.${newPlan.name.toUpperCase()}`;
         // Check if this plan already exists in updates (unlikely but good safety) or settings
         const planExists = settings.some(s => s.key === planKey);
 
@@ -355,7 +372,7 @@ export default function PlatformAdminPage() {
             key: planKey,
             value: newPlan.priceId,
             type: 'STRING',
-            description: `Stripe Price ID for ${newPlan.name.toUpperCase()} plan`,
+            description: `Stripe ${mode === 'test' ? 'Test' : 'Live'} Price ID for ${newPlan.name.toUpperCase()} plan`,
           });
         }
       }
@@ -512,6 +529,119 @@ export default function PlatformAdminPage() {
               </Button>
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* Stripe Consistency Status (#49) */}
+      <Card className="mb-8">
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-1 text-gray-900 dark:text-white">Stripe Consistency</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Checks that API key, webhook secret and all price IDs belong to the active mode. Checkout is blocked unless the status is green.
+              </p>
+            </div>
+            <Button onClick={handleRunConsistencyCheck} disabled={checkingConsistency} variant="secondary">
+              {checkingConsistency ? 'Checking...' : 'Check now'}
+            </Button>
+          </div>
+
+          {consistency ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span
+                  data-testid="stripe-consistency-status"
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold ${
+                    consistency.status === 'GREEN'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : consistency.status === 'RED'
+                        ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full ${
+                      consistency.status === 'GREEN'
+                        ? 'bg-green-500'
+                        : consistency.status === 'RED'
+                          ? 'bg-red-500'
+                          : 'bg-gray-400'
+                    }`}
+                  />
+                  {consistency.status === 'GREEN' && 'Green – consistent'}
+                  {consistency.status === 'RED' && 'Red – checkout blocked'}
+                  {consistency.status === 'UNKNOWN' && 'Unknown – not verified, checkout blocked'}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Mode: <span className="font-mono">{consistency.mode ?? '–'}</span>
+                  {' · '}
+                  Checked: {consistency.checkedAt ? new Date(consistency.checkedAt).toLocaleString() : 'not yet'}
+                </span>
+              </div>
+
+              {consistency.errors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <p className="font-semibold text-red-800 dark:text-red-200 mb-2">Errors</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-red-700 dark:text-red-300">
+                    {consistency.errors.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {consistency.warnings.length > 0 && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                  <p className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Warnings</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    {consistency.warnings.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {consistency.plans.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 dark:text-gray-400">
+                        <th className="py-2 pr-4 font-medium">Plan</th>
+                        <th className="py-2 pr-4 font-medium">Price ID</th>
+                        <th className="py-2 pr-4 font-medium">Result</th>
+                        <th className="py-2 font-medium">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {consistency.plans.map((plan) => (
+                        <tr key={plan.plan}>
+                          <td className="py-2 pr-4 font-mono text-gray-900 dark:text-white">{plan.plan}</td>
+                          <td className="py-2 pr-4 font-mono text-gray-700 dark:text-gray-300">{plan.priceId}</td>
+                          <td
+                            className={`py-2 pr-4 font-semibold ${
+                              plan.result === 'OK'
+                                ? 'text-green-600 dark:text-green-400'
+                                : plan.result === 'ERROR'
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : plan.result === 'WARNING'
+                                    ? 'text-yellow-600 dark:text-yellow-400'
+                                    : 'text-gray-500 dark:text-gray-400'
+                            }`}
+                          >
+                            {plan.result}
+                          </td>
+                          <td className="py-2 text-gray-600 dark:text-gray-400">{plan.message}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600 dark:text-gray-400">Status could not be loaded.</p>
+          )}
         </div>
       </Card>
 

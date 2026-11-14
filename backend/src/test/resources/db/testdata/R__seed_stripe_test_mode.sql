@@ -25,9 +25,9 @@ VALUES
     ('stripe.mode', 'test', 'STRING', 'Stripe API mode: test or live', FALSE),
     ('stripe.test.api_key', 'sk_test_kitly_ci_0000000000000000000000000', 'STRING', 'Stripe Test Mode API Key (CI fixture, not a real key)', TRUE),
     ('stripe.test.webhook_secret', 'whsec_kitly_ci_test_secret_00000000000000', 'STRING', 'Stripe Test Mode Webhook Secret (CI fixture, not a real secret)', TRUE),
-    ('stripe.plan.STARTER', 'price_test_starter_ci', 'STRING', 'Stripe Test Mode Price ID for plan STARTER (CI fixture)', FALSE),
-    ('stripe.plan.BUSINESS', 'price_test_business_ci', 'STRING', 'Stripe Test Mode Price ID for plan BUSINESS (CI fixture)', FALSE),
-    ('stripe.plan.ENTERPRISE', 'price_test_enterprise_ci', 'STRING', 'Stripe Test Mode Price ID for plan ENTERPRISE (CI fixture)', FALSE)
+    ('stripe.test.plan.STARTER', 'price_test_starter_ci', 'STRING', 'Stripe Test Mode Price ID for plan STARTER (CI fixture)', FALSE),
+    ('stripe.test.plan.BUSINESS', 'price_test_business_ci', 'STRING', 'Stripe Test Mode Price ID for plan BUSINESS (CI fixture)', FALSE),
+    ('stripe.test.plan.ENTERPRISE', 'price_test_enterprise_ci', 'STRING', 'Stripe Test Mode Price ID for plan ENTERPRISE (CI fixture)', FALSE)
 ON CONFLICT (setting_key) DO UPDATE
     SET setting_value = EXCLUDED.setting_value,
         setting_type = EXCLUDED.setting_type,

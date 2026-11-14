@@ -4,6 +4,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Price;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;
+import de.atstck.kitly.billing.stripe.StripeConsistencyService;
 import de.atstck.kitly.config.StripeConfig;
 import de.atstck.kitly.dto.PlanPriceStatusResponse;
 import de.atstck.kitly.dto.StripePlanResponse;
@@ -35,19 +36,24 @@ public class StripeService {
     private final StripeConfig stripeConfig;
     private final PlatformSettingService platformSettingService;
     private final PlanService planService;
+    private final StripeConsistencyService stripeConsistencyService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
 
-    public StripeService(TenantRepository tenantRepository, UserRepository userRepository, StripeConfig stripeConfig, PlatformSettingService platformSettingService, PlanService planService) {
+    public StripeService(TenantRepository tenantRepository, UserRepository userRepository, StripeConfig stripeConfig, PlatformSettingService platformSettingService, PlanService planService, StripeConsistencyService stripeConsistencyService) {
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
         this.stripeConfig = stripeConfig;
         this.platformSettingService = platformSettingService;
         this.planService = planService;
+        this.stripeConsistencyService = stripeConsistencyService;
     }
 
     public String createCheckoutSession(UUID tenantId, String username, String planCode, String appId) throws StripeException {
+        // Refuse early when test/live configuration is inconsistent (#49), before anything reaches Stripe.
+        stripeConsistencyService.assertCheckoutAllowed();
+
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 

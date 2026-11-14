@@ -1,5 +1,7 @@
 package de.atstck.kitly.controller;
 
+import de.atstck.kitly.billing.stripe.StripeCheckoutBlockedException;
+import de.atstck.kitly.config.StripeConfig;
 import de.atstck.kitly.dto.CheckoutRequest;
 import de.atstck.kitly.dto.StripePlanResponse;
 import de.atstck.kitly.dto.SubscriptionResponse;
@@ -9,6 +11,7 @@ import de.atstck.kitly.service.StripeService;
 import de.atstck.kitly.service.SubscriptionService;
 import de.atstck.kitly.security.annotation.TenantAccessCheck;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -24,8 +27,10 @@ public class BillingController {
     private final StripeService stripeService;
     private final SubscriptionService subscriptionService;
     private final InvoiceRepository invoiceRepository;
+    private final StripeConfig stripeConfig;
 
-    public BillingController(StripeService stripeService, SubscriptionService subscriptionService, InvoiceRepository invoiceRepository) {
+    public BillingController(StripeService stripeService, SubscriptionService subscriptionService, InvoiceRepository invoiceRepository, StripeConfig stripeConfig) {
+        this.stripeConfig = stripeConfig;
         this.stripeService = stripeService;
         this.subscriptionService = subscriptionService;
         this.invoiceRepository = invoiceRepository;
@@ -36,6 +41,10 @@ public class BillingController {
         try {
             String url = stripeService.createCheckoutSession(request.getTenantId(), authentication.getName(), request.getPlanCode(), request.getAppId());
             return ResponseEntity.ok(Map.of("url", url));
+        } catch (StripeCheckoutBlockedException e) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "error", e.getMessage(),
+                    "code", StripeCheckoutBlockedException.ERROR_CODE));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -66,6 +75,15 @@ public class BillingController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    /**
+     * Public: the active Stripe mode ("test" or "live"), e.g. for the test-mode banner on /checkout.
+     * Exposes only the mode, nothing secret.
+     */
+    @GetMapping("/stripe-mode")
+    public ResponseEntity<Map<String, String>> getStripeMode() {
+        return ResponseEntity.ok(Map.of("mode", stripeConfig.getCurrentMode()));
     }
 
     @GetMapping("/plans")

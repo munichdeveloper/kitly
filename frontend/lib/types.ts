@@ -255,6 +255,26 @@ export interface PlanPriceStatusResponse {
   error?: string;
 }
 
+export type StripeMode = 'test' | 'live';
+
+export type StripeConsistencyStatus = 'GREEN' | 'RED' | 'UNKNOWN';
+
+export interface StripePlanPriceCheck {
+  plan: string;
+  priceId: string;
+  result: 'OK' | 'WARNING' | 'ERROR' | 'UNKNOWN' | 'SKIPPED';
+  message: string;
+}
+
+export interface StripeConsistencyReport {
+  status: StripeConsistencyStatus;
+  mode: string | null;
+  checkedAt: string | null;
+  errors: string[];
+  warnings: string[];
+  plans: StripePlanPriceCheck[];
+}
+
 export interface PlanActivationRequest {
   planName: string;
   active: boolean;

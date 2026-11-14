@@ -1,5 +1,7 @@
 package de.atstck.kitly.controller;
 
+import de.atstck.kitly.billing.stripe.StripeConsistencyReport;
+import de.atstck.kitly.billing.stripe.StripeConsistencyService;
 import de.atstck.kitly.config.StripeConfig;
 import de.atstck.kitly.dto.PlanPriceStatusResponse;
 import de.atstck.kitly.dto.PlatformSettingDTO;
@@ -31,6 +33,7 @@ public class PlatformAdminController {
     private final StripeConfig stripeConfig;
     private final UserRepository userRepository;
     private final StripeService stripeService;
+    private final StripeConsistencyService stripeConsistencyService;
 
     @GetMapping
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
@@ -55,7 +58,7 @@ public class PlatformAdminController {
         PlatformSettingDTO setting = platformSettingService.createOrUpdateSetting(request, userId);
 
         if (request.getKey().startsWith("stripe.")) {
-            stripeConfig.refreshStripeConfig();
+            refreshStripeAndRecheck();
         }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(setting);
@@ -72,7 +75,7 @@ public class PlatformAdminController {
         PlatformSettingDTO setting = platformSettingService.createOrUpdateSetting(request, userId);
 
         if (key.startsWith("stripe.")) {
-            stripeConfig.refreshStripeConfig();
+            refreshStripeAndRecheck();
         }
 
         return ResponseEntity.ok(setting);
@@ -84,7 +87,7 @@ public class PlatformAdminController {
         platformSettingService.deleteSetting(key);
 
         if (key.startsWith("stripe.")) {
-            stripeConfig.refreshStripeConfig();
+            refreshStripeAndRecheck();
         }
 
         return ResponseEntity.noContent().build();
@@ -97,6 +100,11 @@ public class PlatformAdminController {
             Authentication authentication) {
         UUID userId = getUserIdFromAuthentication(authentication);
         List<PlatformSettingDTO> settings = platformSettingService.bulkUpdateSettings(requests, userId);
+
+        if (requests.stream().anyMatch(r -> r.getKey() != null && r.getKey().startsWith("stripe."))) {
+            refreshStripeAndRecheck();
+        }
+
         return ResponseEntity.ok(settings);
     }
 
@@ -125,8 +133,8 @@ public class PlatformAdminController {
 
         platformSettingService.createOrUpdateSetting(settingRequest, userId);
 
-        // Refresh Stripe configuration
-        stripeConfig.refreshStripeConfig();
+        // Refresh Stripe configuration and verify the new mode end to end
+        refreshStripeAndRecheck();
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "Stripe mode switched to " + newMode);
@@ -147,7 +155,7 @@ public class PlatformAdminController {
     @PostMapping("/stripe/refresh")
     @PreAuthorize("hasRole('PLATFORM_ADMIN')")
     public ResponseEntity<Map<String, Object>> refreshStripeConfig() {
-        stripeConfig.refreshStripeConfig();
+        refreshStripeAndRecheck();
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Stripe configuration refreshed successfully");
@@ -165,6 +173,24 @@ public class PlatformAdminController {
         return ResponseEntity.ok(planStatuses);
     }
 
+    /** Last result of the Stripe test/live consistency check (#49). */
+    @GetMapping("/stripe/consistency")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<StripeConsistencyReport> getStripeConsistency() {
+        return ResponseEntity.ok(stripeConsistencyService.getLastReport());
+    }
+
+    /** Re-reads the Stripe settings and runs the consistency check now. */
+    @PostMapping("/stripe/consistency/check")
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<StripeConsistencyReport> runStripeConsistencyCheck() {
+        return ResponseEntity.ok(refreshStripeAndRecheck());
+    }
+
+    private StripeConsistencyReport refreshStripeAndRecheck() {
+        stripeConfig.refreshStripeConfig();
+        return stripeConsistencyService.runCheck();
+    }
 
     private UUID getUserIdFromAuthentication(Authentication authentication) {
         String username = authentication.getName();

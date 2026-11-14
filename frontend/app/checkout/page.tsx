@@ -4,13 +4,12 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, ArrowLeft, CreditCard, ExternalLink } from 'lucide-react';
 import { ApiClient, ApiError, TenantResponse } from '@/lib/api';
+import type { StripeMode } from '@/lib/types';
 import Button from '@/components/Button';
 import Card from '@/components/Card';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useToast } from '@/lib/toast-context';
-
-const stripeTestModeEnabled = process.env.NEXT_PUBLIC_STRIPE_TEST_MODE === 'true';
 
 function CheckoutFallback() {
   return (
@@ -33,6 +32,8 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The Stripe mode comes from the backend (stripe.mode), never from a build-time flag.
+  const [stripeMode, setStripeMode] = useState<StripeMode | null>(null);
 
   const planCode = useMemo(() => requestedPlan.trim().toUpperCase(), [requestedPlan]);
 
@@ -56,6 +57,23 @@ function CheckoutContent() {
     };
 
     loadTenants();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    ApiClient.getPublicStripeMode()
+      .then((data) => {
+        if (!cancelled) {
+          setStripeMode(data.mode);
+        }
+      })
+      .catch((err) => {
+        // No banner if the mode cannot be loaded; the checkout itself is guarded by the backend.
+        console.warn('Could not load Stripe mode', err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startCheckout = async () => {
@@ -115,13 +133,16 @@ function CheckoutContent() {
               </div>
             </div>
 
-            {stripeTestModeEnabled && (
-              <div className="flex items-start gap-3 rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-amber-200">
+            {stripeMode === 'test' && (
+              <div
+                data-testid="stripe-test-mode-banner"
+                className="flex items-start gap-3 rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-amber-200"
+              >
                 <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold">Stripe test checkout indicator is enabled</p>
+                  <p className="font-semibold">Stripe test mode</p>
                   <p className="mt-1 text-sm text-amber-100/80">
-                    This banner is only a QA hint. Stripe test or live mode is controlled by the backend configuration.
+                    Payments are processed in Stripe test mode. No real money is charged; use Stripe test cards.
                   </p>
                 </div>
               </div>

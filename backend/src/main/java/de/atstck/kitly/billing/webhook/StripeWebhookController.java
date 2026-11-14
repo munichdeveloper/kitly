@@ -27,7 +27,7 @@ public class StripeWebhookController {
     private static final String PROVIDER = "stripe";
 
     private final WebhookInboxRepository webhookInboxRepository;
-    private final String webhookSecret;
+    private final StripeConfig stripeConfig;
     private final ObjectMapper objectMapper;
 
     public StripeWebhookController(
@@ -35,7 +35,8 @@ public class StripeWebhookController {
             StripeConfig stripeConfig,
             ObjectMapper objectMapper) {
         this.webhookInboxRepository = webhookInboxRepository;
-        this.webhookSecret = stripeConfig.getWebhookSecret();
+        // Keep the config, not a copy of the secret: the secret must follow a stripe.mode switch at runtime.
+        this.stripeConfig = stripeConfig;
         this.objectMapper = objectMapper;
     }
 
@@ -49,7 +50,7 @@ public class StripeWebhookController {
         // Verify signature
         Event event;
         try {
-            event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
+            event = Webhook.constructEvent(payload, signatureHeader, stripeConfig.getWebhookSecret());
         } catch (SignatureVerificationException e) {
             logger.error("Invalid webhook signature", e);
             return ResponseEntity.badRequest().body(Map.of(
@@ -59,6 +60,21 @@ public class StripeWebhookController {
             logger.error("Error parsing webhook", e);
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "Invalid payload"
+            ));
+        }
+
+        // Reject events from the other Stripe mode (#49). They must never change subscription state.
+        // We answer 200 (not 4xx) on purpose: the event can never become valid by being re-sent, and a
+        // non-2xx answer would make Stripe retry it for days and eventually disable the endpoint, which
+        // would also stop the legitimate events of that endpoint. The rejection is logged as a warning.
+        String mode = stripeConfig.getCurrentMode();
+        if (!livemodeMatches(event.getLivemode(), mode)) {
+            logger.warn("Rejected Stripe webhook with mismatching livemode: id={}, type={}, livemode={}, stripe.mode={}",
+                    event.getId(), event.getType(), event.getLivemode(), mode);
+            return ResponseEntity.ok(Map.of(
+                    "status", "ignored",
+                    "reason", "livemode_mismatch",
+                    "eventId", event.getId()
             ));
         }
 
@@ -104,5 +120,16 @@ public class StripeWebhookController {
                     "error", "Error storing webhook"
             ));
         }
+    }
+
+    /**
+     * True when the event's {@code livemode} flag fits the configured mode. A missing flag is treated as
+     * a mismatch: real Stripe events always carry it.
+     */
+    static boolean livemodeMatches(Boolean livemode, String mode) {
+        if (livemode == null) {
+            return false;
+        }
+        return livemode == StripeConfig.MODE_LIVE.equals(mode);
     }
 }

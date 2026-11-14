@@ -135,6 +135,19 @@ public class WebhookProcessor {
 
             String eventType = webhook.getEventType();
 
+            // Defense in depth for #49: StripeWebhookController already rejects events from the other
+            // Stripe mode, but events stored before that guard existed (or before a mode switch) must
+            // not change subscription state either.
+            String livemodeMismatch = livemodeMismatch(webhook);
+            if (livemodeMismatch != null) {
+                log.warn("Ignoring webhook {} ({}): {}", webhook.getEventId(), eventType, livemodeMismatch);
+                webhook.setStatus(WebhookInbox.WebhookStatus.FAILED);
+                webhook.setErrorMessage(livemodeMismatch);
+                webhook.setProcessedAt(LocalDateTime.now());
+                webhookInboxRepository.save(webhook);
+                return;
+            }
+
             if (!SUPPORTED_EVENTS.contains(eventType)) {
                 log.info("Skipping unsupported event type: {}", eventType);
                 webhook.setStatus(WebhookInbox.WebhookStatus.PROCESSED);
@@ -206,6 +219,26 @@ public class WebhookProcessor {
             webhook.setRetryCount(webhook.getRetryCount() + 1);
             webhookInboxRepository.save(webhook);
         }
+    }
+
+    /**
+     * Returns a reason when the stored event's {@code livemode} does not match {@code stripe.mode},
+     * otherwise null. Payloads without the flag are left to the controller, which only stores events
+     * that carry a matching one.
+     */
+    private String livemodeMismatch(WebhookInbox webhook) {
+        Map<String, Object> payload = webhook.getPayload();
+        Object livemode = payload != null ? payload.get("livemode") : null;
+        if (livemode == null) {
+            return null;
+        }
+        String mode = stripeConfig.getCurrentMode();
+        boolean eventIsLive = Boolean.parseBoolean(String.valueOf(livemode));
+        boolean expectLive = StripeConfig.MODE_LIVE.equals(mode);
+        if (eventIsLive == expectLive) {
+            return null;
+        }
+        return "Ignored: event livemode=" + eventIsLive + " does not match stripe.mode=" + mode;
     }
 
     @SuppressWarnings("unchecked")
