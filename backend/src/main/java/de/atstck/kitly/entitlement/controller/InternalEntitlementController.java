@@ -43,7 +43,7 @@ public class InternalEntitlementController {
     public record LookupRequest(List<UUID> tenantIds) { }
 
     public record TenantEntitlements(UUID tenantId, LookupStatus status, String planCode, String subscriptionStatus,
-                                     Long entitlementVersion, List<EntitlementResponse.EntitlementItem> items) { }
+                                     Long entitlementVersion, List<EntitlementResponse.EntitlementItem> items, List<String> activePlanCodes) { }
 
     public record LookupResponse(List<TenantEntitlements> tenants) { }
 
@@ -84,16 +84,16 @@ public class InternalEntitlementController {
 
     private TenantEntitlements lookup(UUID tenantId) {
         if (!tenantRepository.existsById(tenantId)) {
-            return new TenantEntitlements(tenantId, LookupStatus.UNKNOWN_TENANT, null, null, null, List.of());
+            return new TenantEntitlements(tenantId, LookupStatus.UNKNOWN_TENANT, null, null, null, List.of(), List.of());
         }
         try {
             EntitlementResponse entitlements = entitlementService.computeEntitlements(tenantId);
             return new TenantEntitlements(tenantId, LookupStatus.ACTIVE, entitlements.getPlanCode(),
                     entitlements.getStatus(), entitlements.getEntitlementVersion(),
-                    entitlements.getItems() == null ? List.of() : entitlements.getItems());
+                    entitlements.getItems() == null ? List.of() : entitlements.getItems(), entitlements.getActivePlanCodes());
         } catch (ResourceNotFoundException | IllegalStateException e) {
             // No ACTIVE/TRIALING subscription, or one without a usable plan: apps must revoke paid rights.
-            return new TenantEntitlements(tenantId, LookupStatus.NO_SUBSCRIPTION, null, null, null, List.of());
+            return new TenantEntitlements(tenantId, LookupStatus.NO_SUBSCRIPTION, null, null, null, List.of(), List.of());
         } catch (RuntimeException e) {
             // Unexpected failure for one tenant must not be reported as "no subscription".
             log.error("Internal entitlement lookup failed for tenant {}", tenantId, e);

@@ -19,6 +19,7 @@ public class EntitlementResponse {
     
     private UUID tenantId;
     private String planCode;
+    private List<String> activePlanCodes;
     private String status;
     private Integer seatsQuantity;
     private Long activeSeats;

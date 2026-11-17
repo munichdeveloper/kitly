@@ -134,6 +134,7 @@ export interface AcceptInviteRequest {
 
 // Entitlement Types
 export interface EntitlementResponse {
+  activePlanCodes: string[];
   tenantId: string;
   planCode: string;
   status: string;

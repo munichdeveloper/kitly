@@ -428,6 +428,12 @@ export default function PlatformAdminPage() {
         </div>
       )}
 
+      <Card className="mb-8">
+        <h2 className="text-xl font-bold mb-2">Tenant access</h2>
+        <p className="mb-4">View and manage the plans enabled for each workspace.</p>
+        <Button onClick={() => router.push('/admin/platform/tenants')}>Manage tenant plans</Button>
+      </Card>
+
       {/* Plans Management Card */}
       <Card className="mb-8">
         <div className="p-6">
