@@ -48,39 +48,38 @@ public class EntitlementService {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant not found"));
         
-        // Get active subscription
-        Subscription subscription = getActiveSubscription(tenantId);
-        
-        // Get plan code from subscription's PlanEntity
-        String planCode = subscription.getPlanCode();
-        if (planCode == null) {
-            throw new IllegalStateException("Subscription has no plan assigned");
+        List<Subscription> subscriptions = subscriptionRepository.findAccessSubscriptions(tenantId);
+        Set<String> activePlans = new LinkedHashSet<>();
+        for (Subscription subscription : subscriptions) {
+            String code = subscription.getPlanCode();
+            if (tenant.getPlanAccess().getOrDefault(code, true)) {
+                activePlans.add(code);
+            }
+        }
+        tenant.getPlanAccess().entrySet().stream().filter(Map.Entry::getValue)
+                .map(Map.Entry::getKey).sorted().forEach(activePlans::add);
+        if (activePlans.isEmpty()) {
+            throw new ResourceNotFoundException("No active plan found");
         }
 
-        // Get plan entitlements from PlanService (database)
-        Map<String, String> planEntitlements = planService.getPlanEntitlements(planCode);
-
-        // Start with plan entitlements
         Map<String, EntitlementResponse.EntitlementItem> mergedEntitlements = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : planEntitlements.entrySet()) {
-            mergedEntitlements.put(entry.getKey(), EntitlementResponse.EntitlementItem.builder()
-                    .key(entry.getKey())
-                    .value(entry.getValue())
-                    .source("PLAN")
-                    .build());
+        Subscription primary = subscriptions.isEmpty() ? null : subscriptions.get(0);
+        for (String code : activePlans) {
+            planService.getPlanEntitlements(code).forEach((key, value) -> {
+                var item = EntitlementResponse.EntitlementItem.builder().key(key).value(value).source("PLAN").build();
+                mergedEntitlements.merge(key, item, EntitlementService::morePermissive);
+            });
+
+            // Legacy rows include cached subscription rights. Apply them only with their base plan.
+            if (primary != null && code.equals(primary.getPlanCode())) {
+                for (Entitlement override : entitlementRepository.findByTenantAndEnabled(tenant, true)) {
+                    String key = override.getFeatureKey();
+                    mergedEntitlements.put(key, EntitlementResponse.EntitlementItem.builder()
+                            .key(key).value(getEntitlementValue(override)).source("OVERRIDE").build());
+                }
+            }
         }
-        
-        // Apply overrides from entitlements table
-        List<Entitlement> overrides = entitlementRepository.findByTenantAndEnabled(tenant, true);
-        for (Entitlement override : overrides) {
-            String value = getEntitlementValue(override);
-            mergedEntitlements.put(override.getFeatureKey(), EntitlementResponse.EntitlementItem.builder()
-                    .key(override.getFeatureKey())
-                    .value(value)
-                    .source("OVERRIDE")
-                    .build());
-        }
-        
+
         // Get active seats count
         long activeSeats = membershipRepository.countByTenantIdAndStatus(
                 tenantId, Membership.MembershipStatus.ACTIVE);
@@ -91,15 +90,29 @@ public class EntitlementService {
         // Build response
         return EntitlementResponse.builder()
                 .tenantId(tenantId)
-                .planCode(planCode)
-                .status(subscription.getStatus().name())
-                .seatsQuantity(subscription.getMaxSeats())
+                .planCode(activePlans.iterator().next())
+                .activePlanCodes(List.copyOf(activePlans))
+                .status(primary != null && activePlans.contains(primary.getPlanCode()) ? primary.getStatus().name() : "ACTIVE")
+                .seatsQuantity(primary == null ? null : primary.getMaxSeats())
                 .activeSeats(activeSeats)
                 .entitlementVersion(version.getVersion())
                 .items(new ArrayList<>(mergedEntitlements.values()))
                 .build();
     }
     
+    private static EntitlementResponse.EntitlementItem morePermissive(
+            EntitlementResponse.EntitlementItem current, EntitlementResponse.EntitlementItem candidate) {
+        String value = candidate.getValue();
+        if ("unlimited".equalsIgnoreCase(value) || "true".equalsIgnoreCase(value)) {
+            return candidate;
+        }
+        try {
+            return Long.parseLong(value) > Long.parseLong(current.getValue()) ? candidate : current;
+        } catch (NumberFormatException ignored) {
+            return current;
+        }
+    }
+
     /**
      * Bump entitlement version for cache invalidation
      */
@@ -219,10 +232,7 @@ public class EntitlementService {
      * Get active subscription for a tenant
      */
     private Subscription getActiveSubscription(UUID tenantId) {
-        return subscriptionRepository.findByTenantIdAndStatus(
-                tenantId, Subscription.SubscriptionStatus.ACTIVE)
-                .or(() -> subscriptionRepository.findByTenantIdAndStatus(
-                        tenantId, Subscription.SubscriptionStatus.TRIALING))
+        return subscriptionRepository.findAccessSubscriptions(tenantId).stream().findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("No active subscription found"));
     }
     

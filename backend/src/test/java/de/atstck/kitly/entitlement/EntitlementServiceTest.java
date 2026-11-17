@@ -75,8 +75,7 @@ class EntitlementServiceTest {
     void testComputeEntitlements_WithProPlan() {
         // Given
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(testSubscription));
+        when(subscriptionRepository.findAccessSubscriptions(testTenantId)).thenReturn(List.of(testSubscription));
 
         // Mock PlanService to return business plan entitlements
         Map<String, String> businessEntitlements = new LinkedHashMap<>();
@@ -131,8 +130,7 @@ class EntitlementServiceTest {
     void testComputeEntitlements_WithOverrides() {
         // Given
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(testSubscription));
+        when(subscriptionRepository.findAccessSubscriptions(testTenantId)).thenReturn(List.of(testSubscription));
         
         // Mock PlanService to return business plan entitlements
         Map<String, String> businessEntitlements = new LinkedHashMap<>();
@@ -191,8 +189,7 @@ class EntitlementServiceTest {
         testSubscription.setPlan(starterPlan);
 
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(testSubscription));
+        when(subscriptionRepository.findAccessSubscriptions(testTenantId)).thenReturn(List.of(testSubscription));
 
         // Mock PlanService to return starter plan entitlements
         Map<String, String> starterEntitlements = new LinkedHashMap<>();
@@ -230,13 +227,24 @@ class EntitlementServiceTest {
     }
     
     @Test
+    void additionalPlanGrantsFeaturesAndTheHigherLimit() {
+        when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
+        when(subscriptionRepository.findAccessSubscriptions(testTenantId)).thenReturn(List.of(testSubscription));
+        testTenant.getPlanAccess().put("reports", true);
+        when(planService.getPlanEntitlements("business")).thenReturn(Map.of("features.reports", "false", "limits.exports", "50"));
+        when(planService.getPlanEntitlements("reports")).thenReturn(Map.of("features.reports", "true", "limits.exports", "10"));
+        when(entitlementVersionRepository.findByTenant(testTenant)).thenReturn(Optional.of(EntitlementVersion.builder().build()));
+
+        var response = entitlementService.computeEntitlements(testTenantId);
+        assertEquals(List.of("business", "reports"), response.getActivePlanCodes());
+        assertTrue(response.getItems().stream().anyMatch(item -> item.getKey().equals("features.reports") && item.getValue().equals("true")));
+        assertTrue(response.getItems().stream().anyMatch(item -> item.getKey().equals("limits.exports") && item.getValue().equals("50")));
+    }
+
+    @Test
     void testComputeEntitlements_NoActiveSubscription() {
         // Given
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.empty());
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.TRIALING))
-                .thenReturn(Optional.empty());
         
         // When & Then
         assertThrows(ResourceNotFoundException.class, () -> {
@@ -248,8 +256,7 @@ class EntitlementServiceTest {
     void testComputeEntitlements_CreatesVersionIfNotExists() {
         // Given
         when(tenantRepository.findById(testTenantId)).thenReturn(Optional.of(testTenant));
-        when(subscriptionRepository.findByTenantIdAndStatus(testTenantId, Subscription.SubscriptionStatus.ACTIVE))
-                .thenReturn(Optional.of(testSubscription));
+        when(subscriptionRepository.findAccessSubscriptions(testTenantId)).thenReturn(List.of(testSubscription));
 
         // Mock PlanService to return business plan entitlements
         Map<String, String> businessEntitlements = new LinkedHashMap<>();

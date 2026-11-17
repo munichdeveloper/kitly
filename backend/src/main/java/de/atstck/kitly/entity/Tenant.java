@@ -1,5 +1,8 @@
 package de.atstck.kitly.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -9,6 +12,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -41,6 +46,16 @@ public class Tenant {
     @Builder.Default
     private TenantStatus status = TenantStatus.ACTIVE;
     
+    @ElementCollection
+    @CollectionTable(name = "tenant_plan_access", joinColumns = @JoinColumn(name = "tenant_id"))
+    @MapKeyColumn(name = "plan_code", length = 50)
+    @Column(name = "enabled", nullable = false)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @JsonIgnore
+    private Map<String, Boolean> planAccess = new HashMap<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private User owner;
